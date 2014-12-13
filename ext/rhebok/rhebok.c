@@ -741,13 +741,11 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       iovcnt++;
     }
 
-    /*
     if ( date_pushed == 0 ) {
       v[iovcnt].iov_len = _date_line(date_line);
       v[iovcnt].iov_base = date_line;
       iovcnt++;
     }
-    */
 
     v[iovcnt].iov_base = "\r\n";
     v[iovcnt].iov_len = sizeof("\r\n") - 1;

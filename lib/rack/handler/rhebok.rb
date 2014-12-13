@@ -120,8 +120,8 @@ module Rack
             exit!(true)
           end
         }
-        Signal.trap('INT','SYSTEM_DEFAULT')
-        Signal.trap('PIPE', proc { })
+        Signal.trap('INT','SYSTEM_DEFAULT') # XXX
+        Signal.trap('PIPE', proc { }) # XXX
         max_reqs = self._calc_reqs_per_child()
         fileno = @server.fileno
         while proc_req_count < max_reqs
@@ -178,62 +178,6 @@ module Rack
           end
         end #while max_reqs
       end #def
-
-      def handle_connection(env, connection, app)
-        buf = ""
-        while true
-          readed = self.read_timeout(connection)
-          if readed == nil then
-            next
-          end
-          @can_exit = false
-          buf += readed
-          reqlen = PicoHTTPParser.parse_http_request(buf,env)
-          if reqlen >= 0 then
-
-
-            status, header, body = app.call(env)
-            res_header = "HTTP/1.0 "+status.to_s+" "+Rack::Utils::HTTP_STATUS_CODES[status]+"\r\nConnection: close\r\n"
-            sent_date = false
-            sent_server = false
-            header.each do |k,vs|
-              dk = k.downcase
-              if dk == "connection" then
-                next
-              end
-              if dk == "date" then
-                sent_date = true
-              end
-              if dk == "server" then
-                sent_server = true
-              end
-              res_header += k + ": " + vs + "\r\n"
-            end
-            if !sent_date then
-              res_header += "Date: " + Time.now.httpdate + "\r\n"
-            end
-            if !sent_server then
-              res_header += "Server: RubyStarlet\r\n"
-            end
-            res_header += "\r\n"
-            if body.length == 1 && body[0].bytesize < 40960 then
-              ret = self.write_all(connection,res_header+body[0])
-            else
-              ret = self.write_all(connection,res_header)
-              body.each do |part|
-                self.write_all(connection,part)
-              end
-            end
-            return true
-          elsif reqlen == -2 then
-            # request is incomplete, do nothing
-          else
-            # error
-            return nil
-          end
-        end
-      end
-
 
     end
   end
