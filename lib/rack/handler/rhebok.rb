@@ -14,6 +14,7 @@ require 'rhebok'
 module Rack
   module Handler
     class Rhebok
+      MAX_MEMORY_BUFFER_SIZE = 1024 * 1024
       DEFAULT_OPTIONS = {
         :Host => '0.0.0.0',
         :Port => 9292,
@@ -88,6 +89,7 @@ module Rack
         if @options[:ErrRespawnInterval] then
           pm_args["err_respawn_interval"] = @options[:ErrRespawnInterval].to_i
         end
+        Signal.trap('INT','SYSTEM_DEFAULT') # XXX
         pe = PreforkEngine.new(pm_args)
         while !pe.signal_received.match(/^(TERM|USR1)$/)
           pe.start {
@@ -120,7 +122,7 @@ module Rack
             exit!(true)
           end
         }
-        Signal.trap('INT','SYSTEM_DEFAULT') # XXX
+
         Signal.trap('PIPE', proc { }) # XXX
         max_reqs = self._calc_reqs_per_child()
         fileno = @server.fileno
@@ -128,6 +130,8 @@ module Rack
           @can_exit = true
           connection, buf, env = ::Rhebok.accept_rack(fileno, @options[:Timeout], @_is_tcp, @options[:Host], @options[:Port].to_s)
           if connection then
+            # for tempfile
+            buffer = nil
             begin
               proc_req_count += 1
               @can_exit = false
@@ -135,7 +139,12 @@ module Rack
               env["SERVER_PROTOCOL"] = "HTTP/1.0"
               # handle request
               if (cl = env["CONTENT_LENGTH"].to_i) > 0 then
-                buffer = StringIO.new("").set_encoding('BINARY')
+                if cl > MAX_MEMORY_BUFFER_SIZE
+                  buffer = Tempfile.open('r')
+                  buffer.set_encoding('BINARY')
+                else
+                  buffer = StringIO.new("").set_encoding('BINARY')
+                end
                 while cl > 0
                   chunk = ""
                   if buf.bytesize > 0 then
@@ -170,6 +179,9 @@ module Rack
                 end #body.each
               end
             ensure
+              if buffer.respond_to?("close!")
+                buffer.close!
+              end
               ::Rhebok.close_rack(connection)
             end #begin
           end # accept
