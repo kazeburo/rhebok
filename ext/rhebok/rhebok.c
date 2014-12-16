@@ -134,7 +134,7 @@ void set_common_header(const char * key, int key_len, const int raw)
 {
   char tmp[MAX_HEADER_NAME_LEN + sizeof("HTTP_") - 1];
   const char* name;
-  size_t name_len;
+  size_t name_len = 0;
   const char * s;
   char* d;
   size_t n;
@@ -590,7 +590,7 @@ static
 VALUE rhe_write_all(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE timeout) {
   char * d;
   ssize_t buf_len;
-  ssize_t rv;
+  ssize_t rv = 0;
   ssize_t written = 0;
   ssize_t offset = NUM2LONG(offsetv);
 
@@ -629,13 +629,12 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   ssize_t blen;
 
   ssize_t len;
-  ssize_t rv;
+  ssize_t rv = 0;
   ssize_t iovcnt;
   ssize_t vec_offset;
   ssize_t written;
   int count;
   int i;
-  struct iovec * v;
   char status_line[512];
   char date_line[512];
   int date_pushed = 0;
@@ -740,7 +739,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       }
       written += rv;
       while ( rv > 0 ) {
-        if ( rv >= v[vec_offset].iov_len ) {
+        if ( (int)rv >= v[vec_offset].iov_len ) {
         rv -= v[vec_offset].iov_len;
           vec_offset++;
         }
