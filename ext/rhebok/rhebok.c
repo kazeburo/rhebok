@@ -502,11 +502,10 @@ int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
 
 
 static
-VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE host, VALUE port) {
+VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env) {
   struct sockaddr_in cliaddr;
   unsigned int len;
   char read_buf[MAX_HEADER_SIZE];
-  VALUE env;
   VALUE req;
   int flag = 1;
   ssize_t rv = 0;
@@ -529,7 +528,7 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE host
     goto badexit;
   }
 
-  /* build env */
+  /* build env
   env = rb_hash_new();
   rb_hash_aset(env, server_name_key, host);
   rb_hash_aset(env, server_port_key, port);
@@ -539,6 +538,7 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE host
   rb_hash_aset(env, rack_multiprocess_key, rack_multiprocess_val);
   rb_hash_aset(env, rack_run_once_key, rack_run_once_val);
   rb_hash_aset(env, rack_url_scheme_key, rack_url_scheme_val);
+  */
 
   if ( IMMEDIATE_P(tcp) ) {
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
@@ -548,7 +548,6 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE host
   else {
     rb_hash_aset(env, remote_addr_key, rb_str_new("",0));
     rb_hash_aset(env, remote_port_key, rb_String(rb_int_new(0)));
-
   }
 
   buf_len = rv;
@@ -582,8 +581,6 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE host
   req = rb_ary_new2(3);
   rb_ary_push(req, rb_int_new(fd));
   rb_ary_push(req, rb_str_new(&read_buf[reqlen],buf_len - reqlen));
-  rb_ary_push(req, env);
-  rb_thread_schedule();
   return req;
  badexit:
   return Qnil;
@@ -848,7 +845,7 @@ void Init_rhebok()
   set_common_header("X-FORWARDED-FOR",sizeof("X-FORWARDED-FOR") - 1, 0);
 
   cRhebok = rb_const_get(rb_cObject, rb_intern("Rhebok"));
-  rb_define_module_function(cRhebok, "accept_rack", rhe_accept, 5);
+  rb_define_module_function(cRhebok, "accept_rack", rhe_accept, 4);
   rb_define_module_function(cRhebok, "read_timeout", rhe_read_timeout, 5);
   rb_define_module_function(cRhebok, "write_timeout", rhe_write_timeout, 5);
   rb_define_module_function(cRhebok, "write_all", rhe_write_all, 4);

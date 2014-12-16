@@ -123,17 +123,28 @@ module Rack
             exit!(true)
           end
         end
-        Signal.trap(:PIPE) { 
-          # ignore
-        } # XXX
+        Signal.trap(:PIPE, "IGNORE")
         max_reqs = self._calc_reqs_per_child()
         fileno = @server.fileno
+
+        env_template = {
+          "SERVER_NAME"       => @options[:Host],
+          "SERVER_PORT"       => @options[:Port].to_s,
+          "rack.version"      => [1,1],
+          "rack.errors"       => STDERR,
+          "rack.multithread"  => false,
+          "rack.multiprocess" => true,
+          "rack.run_once"     => false,
+          "rack.url_scheme"   => "http"
+        }
+
         while proc_req_count < max_reqs
           @can_exit = true
+          env = env_template.clone
           # could not run trap handler within C method?
           # so I use select..
           IO.select([@server],[],[],1)
-          connection, buf, env = ::Rhebok.accept_rack(fileno, @options[:Timeout], @_is_tcp, @options[:Host], @options[:Port].to_s)
+          connection, buf = ::Rhebok.accept_rack(fileno, @options[:Timeout], @_is_tcp, env)
           if connection then
             # for tempfile
             buffer = nil
