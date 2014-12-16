@@ -141,9 +141,6 @@ module Rack
         while proc_req_count < max_reqs
           @can_exit = true
           env = env_template.clone
-          # could not run trap handler within C method?
-          # so I use select..
-          IO.select([@server],[],[],1)
           connection, buf = ::Rhebok.accept_rack(fileno, @options[:Timeout], @_is_tcp, env)
           if connection then
             # for tempfile

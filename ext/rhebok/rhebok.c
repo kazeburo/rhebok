@@ -261,6 +261,9 @@ int _accept(int fileno, struct sockaddr *addr, unsigned int addrlen) {
   fd = accept(fileno, addr, &addrlen);
 #endif
   if (fd < 0) {
+    if ( errno == EINTR ) {
+      rb_thread_sleep(1);
+    }
     return fd;
   }
 #ifndef SOCK_NONBLOCK
