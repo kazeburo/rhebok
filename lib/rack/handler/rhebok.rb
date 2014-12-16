@@ -205,7 +205,6 @@ module Rack
             exit!(true)
           end
         end #while max_reqs
-        p ["TERM recieved last",@can_exit,@term_received]
       end #def
 
     end
