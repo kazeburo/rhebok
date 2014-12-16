@@ -1,4 +1,6 @@
 language: ruby
+install:
+  - gem install bacon
 rvm:
   - 2.0.0
   - 2.1.5
