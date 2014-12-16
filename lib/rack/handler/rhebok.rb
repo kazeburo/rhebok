@@ -124,14 +124,15 @@ module Rack
             exit!(true)
           end
         end
-        Signal.trap(:PIPE, proc { }) # XXX
+        Signal.trap(:PIPE) { 
+          # ignore
+        } # XXX
         max_reqs = self._calc_reqs_per_child()
         fileno = @server.fileno
-        # @server.nonblock = true
         while proc_req_count < max_reqs
           @can_exit = true
-          # ruby could not exec trap handler within C method.
-          # so I use nonblock socket and select..
+          # could not run trap handler within C method?
+          # so I use select..
           IO.select([@server],[],[],1)
           connection, buf, env = ::Rhebok.accept_rack(fileno, @options[:Timeout], @_is_tcp, @options[:Host], @options[:Port].to_s)
           if connection then
@@ -146,6 +147,7 @@ module Rack
               if (cl = env["CONTENT_LENGTH"].to_i) > 0 then
                 if cl > MAX_MEMORY_BUFFER_SIZE
                   buffer = Tempfile.open('r')
+                  buffer.binmode
                   buffer.set_encoding('BINARY')
                 else
                   buffer = StringIO.new("").set_encoding('BINARY')
@@ -156,7 +158,7 @@ module Rack
                     chunk = buf
                     buf = ""
                   else
-                    readed = ::Rhebok.read_timeout(connection, chunk, 0, @options[:Timeout])
+                    readed = ::Rhebok.read_timeout(connection, chunk, cl, 0, @options[:Timeout])
                     if readed == nil then
                       return
                     end
