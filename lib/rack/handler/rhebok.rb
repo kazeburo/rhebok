@@ -162,7 +162,6 @@ module Rack
                     if readed == nil then
                       return
                     end
-                    chunk += readed
                   end
                   buffer << chunk
                   cl -= chunk.bytesize
