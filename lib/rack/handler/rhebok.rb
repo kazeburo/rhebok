@@ -62,6 +62,7 @@ module Rack
         end
 
         if @server == nil
+          puts "Rhebok starts Listening on #{@options[:Host]}:#{@options[:Port]} Pid:#{$$}"
           @server = TCPServer.new(@options[:Host], @options[:Port])
           @server.setsockopt(:SOCKET, :REUSEADDR, 1)
           @_is_tcp = true
@@ -91,6 +92,7 @@ module Rack
           pm_args["err_respawn_interval"] = @options[:ErrRespawnInterval].to_i
         end
         Signal.trap('INT','SYSTEM_DEFAULT') # XXX
+
         pe = PreforkEngine.new(pm_args)
         while !pe.signal_received.match(/^(TERM|USR1)$/)
           pe.start {
@@ -113,22 +115,24 @@ module Rack
         @can_exit = true
         @term_received = 0
         proc_req_count = 0
-
-        Signal.trap('TERM') {
+        Signal.trap(:TERM) do
+          @term_received += 1
           if @can_exit then
             exit!(true)
           end
-          @term_received += 1
           if @can_exit || @term_received > 1 then
             exit!(true)
           end
-        }
-
-        Signal.trap('PIPE', proc { }) # XXX
+        end
+        Signal.trap(:PIPE, proc { }) # XXX
         max_reqs = self._calc_reqs_per_child()
         fileno = @server.fileno
+        # @server.nonblock = true
         while proc_req_count < max_reqs
           @can_exit = true
+          # ruby could not exec trap handler within C method.
+          # so I use nonblock socket and select..
+          IO.select([@server],[],[],1)
           connection, buf, env = ::Rhebok.accept_rack(fileno, @options[:Timeout], @_is_tcp, @options[:Host], @options[:Port].to_s)
           if connection then
             # for tempfile
@@ -180,7 +184,7 @@ module Rack
                 end #body.each
               end
             ensure
-              if buffer.respond_to?("close!")
+              if buffer.instance_of?(Tempfile)
                 buffer.close!
               end
               ::Rhebok.close_rack(connection)
@@ -190,6 +194,7 @@ module Rack
             exit!(true)
           end
         end #while max_reqs
+        p ["TERM recieved last",@can_exit,@term_received]
       end #def
 
     end

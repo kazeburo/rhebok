@@ -517,6 +517,7 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE host
 
   len = sizeof(cliaddr);
   fd = _accept(NUM2INT(fileno), (struct sockaddr *)&cliaddr, len);
+
   /* endif */
   if (fd < 0) {
     goto badexit;
@@ -582,6 +583,7 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE host
   rb_ary_push(req, rb_int_new(fd));
   rb_ary_push(req, rb_str_new(&read_buf[reqlen],buf_len - reqlen));
   rb_ary_push(req, env);
+  rb_thread_schedule();
   return req;
  badexit:
   return Qnil;
