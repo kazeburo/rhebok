@@ -118,25 +118,8 @@ static VALUE request_uri_key;
 static VALUE script_name_key;
 static VALUE server_protocol_key;
 static VALUE query_string_key;
-
-static VALUE server_name_key;
-static VALUE server_port_key;
-static VALUE rack_version_key;
-static VALUE rack_version_val;
-static VALUE rack_errors_key;
-static VALUE rack_errors_val;
-static VALUE rack_multithread_key;
-static VALUE rack_multithread_val;
-static VALUE rack_multiprocess_key;
-static VALUE rack_multiprocess_val;
-static VALUE rack_run_once_key;
-static VALUE rack_run_once_val;
-static VALUE rack_url_scheme_key;
-static VALUE rack_url_scheme_val;
 static VALUE remote_addr_key;
 static VALUE remote_port_key;
-
-static VALUE keys_key;
 
 struct common_header {
   const char * name;
@@ -423,7 +406,6 @@ int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
   size_t method_len;
   const char* path;
   size_t path_len;
-  size_t o_path_len;
   int minor_version;
   struct phr_header headers[MAX_HEADERS];
   size_t num_headers, question_at;
@@ -530,18 +512,6 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
     close(fd);
     goto badexit;
   }
-
-  /* build env
-  env = rb_hash_new();
-  rb_hash_aset(env, server_name_key, host);
-  rb_hash_aset(env, server_port_key, port);
-  rb_hash_aset(env, rack_version_key, rack_version_val);
-  rb_hash_aset(env, rack_errors_key, rack_errors_val);
-  rb_hash_aset(env, rack_multithread_key, rack_multithread_val);
-  rb_hash_aset(env, rack_multiprocess_key, rack_multiprocess_val);
-  rb_hash_aset(env, rack_run_once_key, rack_run_once_val);
-  rb_hash_aset(env, rack_url_scheme_key, rack_url_scheme_val);
-  */
 
   if ( IMMEDIATE_P(tcp) ) {
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
@@ -673,7 +643,6 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   VALUE key_obj;
   VALUE val_obj;
   char * key;
-  char * val;
 
   int fileno = NUM2INT(filenov);
   double timeout = NUM2DBL(timeoutv);
@@ -802,36 +771,10 @@ void Init_rhebok()
   query_string_key = rb_obj_freeze(rb_str_new2("QUERY_STRING"));
   rb_gc_register_address(&query_string_key);
 
-  server_name_key = rb_obj_freeze(rb_str_new2("SERVER_NAME"));
-  rb_gc_register_address(&server_name_key);
-  server_port_key = rb_obj_freeze(rb_str_new2("SERVER_PORT"));
-  rb_gc_register_address(&server_port_key);
-  rack_version_key = rb_obj_freeze(rb_str_new2("rack.version"));
-  rb_gc_register_address(&rack_version_key);
-  rack_version_val = rb_obj_freeze(rb_ary_new3(2, INT2FIX(1),INT2FIX(1)));
-  rb_gc_register_address(&rack_version_val);
-  rack_errors_key = rb_obj_freeze(rb_str_new2("rack.errors"));
-  rb_gc_register_address(&rack_errors_key);
-  rack_errors_val = rb_stderr;
-  rack_multithread_key = rb_obj_freeze(rb_str_new2("rack.multithread"));
-  rb_gc_register_address(&rack_multithread_key);
-  rack_multithread_val = Qfalse;
-  rack_multiprocess_key = rb_obj_freeze(rb_str_new2("rack.multiprocess"));
-  rb_gc_register_address(&rack_multiprocess_key);
-  rack_multiprocess_val = Qtrue;
-  rack_run_once_key = rb_obj_freeze(rb_str_new2("rack.run_once"));
-  rb_gc_register_address(&rack_run_once_key);
-  rack_run_once_val = Qfalse;
-  rack_url_scheme_key = rb_obj_freeze(rb_str_new2("rack.url_scheme"));
-  rb_gc_register_address(&rack_url_scheme_key);
-  rack_url_scheme_val = rb_obj_freeze(rb_str_new2("http"));
-  rb_gc_register_address(&rack_url_scheme_val);
   remote_addr_key = rb_obj_freeze(rb_str_new2("REMOTE_ADDR"));
   rb_gc_register_address(&remote_addr_key);
   remote_port_key = rb_obj_freeze(rb_str_new2("REMOTE_PORT"));
   rb_gc_register_address(&remote_port_key);
-  keys_key = rb_obj_freeze(rb_str_new2("keys"));
-  rb_gc_register_address(&keys_key);
 
   set_common_header("ACCEPT",sizeof("ACCEPT") - 1, 0);
   set_common_header("ACCEPT-ENCODING",sizeof("ACCEPT-ENCODING") - 1, 0);
