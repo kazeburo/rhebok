@@ -1,5 +1,6 @@
 language: ruby
 install:
+  - git submodule update --init --recursive
   - gem install bacon
   - bundle install --jobs=3 --retry=3
 rvm:

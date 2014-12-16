@@ -9,7 +9,6 @@ require 'socket'
 require 'rack/utils'
 require 'io/nonblock'
 require 'prefork_engine'
-require 'pico_http_parser'
 require 'rhebok'
 
 module Rack
