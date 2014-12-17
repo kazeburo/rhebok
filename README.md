@@ -179,6 +179,10 @@ result
     Requests/sec: 137435.52
     Transfer/sec:     25.16MB
 
+### Server Environment
+
+I used EC2 for benchmarking. Instance type if c3.8xlarge(32cores). A benchmark tool and web servers were executed at same hosts. 
+
 ## See Also
 
 [Gazelle](https://metacpan.org/pod/Gazelle) Rhebok is created based on Gazelle code
