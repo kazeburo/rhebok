@@ -20,7 +20,7 @@ module Rack
         :Port => 9292,
         :MaxWorkers => 10,
         :Timeout => 300,
-        :MaxRequestPerChild => 100,
+        :MaxRequestPerChild => 1000,
         :MinRequestPerChild => nil,
         :SpawnInterval => nil,
         :ErrRespawnInterval => nil
