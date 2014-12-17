@@ -2,7 +2,7 @@
 
 This project is still in a very early development stage. IT IS NOT READY FOR PRODUCTION!
 
-Rhebok is High Performance Rack Handler/Web Server. 2x performance when compared against Unicorn.
+Rhebok is High Performance Rack Handler/Web Server. 2x performance when compared against Unicorn. 
 
 Rhebok supports following features.
 
@@ -12,6 +12,8 @@ Rhebok supports following features.
 - prefork and graceful shutdown using prefork_engine
 - hot deploy and unix domain socket using start_server
 - only supports HTTP/1.0. But does not support Keepalive.
+
+This server is suitable for running HTTP application servers behind a reverse proxy like nginx.
 
 ## Installation
 
