@@ -588,7 +588,6 @@ VALUE rhe_write_all(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE ti
   ssize_t buf_len;
   ssize_t rv = 0;
   ssize_t written = 0;
-  ssize_t offset = NUM2LONG(offsetv);
 
   d = StringValuePtr(buf);
   buf_len = RSTRING_LEN(buf);
@@ -638,6 +637,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   VALUE key_obj;
   VALUE val_obj;
   char * key;
+  const char * message;
 
   int fileno = NUM2INT(filenov);
   double timeout = NUM2DBL(timeoutv);
@@ -665,7 +665,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
     status_line[i++] = ' ';
     str_i(status_line,&i,status_code,3);
     status_line[i++] = ' ';
-    const char * message = status_message(status_code);
+    message = status_message(status_code);
     str_s(status_line, &i, message, strlen(message));
     status_line[i++] = 13;
     status_line[i++] = 10;
@@ -735,7 +735,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       }
       written += rv;
       while ( rv > 0 ) {
-        if ( (int)rv >= v[vec_offset].iov_len ) {
+        if ( (unsigned int)rv >= v[vec_offset].iov_len ) {
         rv -= v[vec_offset].iov_len;
           vec_offset++;
         }
