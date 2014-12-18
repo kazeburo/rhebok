@@ -1,3 +1,7 @@
+0.0.4 2014-12-19-T01:50:11Z
+
+    - support multiple line header
+
 0.0.3 2014-12-18T17:22:53Z
 
     - fixed segfault. iovec shortage
