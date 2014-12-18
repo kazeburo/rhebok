@@ -650,7 +650,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   rb_hash_foreach(headers, my_hash_keys, arr);
   hlen = RARRAY_LEN(arr);
   blen = RARRAY_LEN(body);
-  iovcnt = 10 + (hlen * 2) + blen;
+  iovcnt = 10 + (hlen * 4) + blen;
 
   {
     struct iovec v[iovcnt]; // Needs C99 compiler
