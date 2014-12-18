@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = Rhebok::VERSION
   spec.authors       = ["Masahiro Nagano"]
   spec.email         = ["kazeburo@gmail.com"]
-  spec.summary       = %q{High Perfomance Preforked Rack Handler}
-  spec.description   = %q{High Perfomance and Optimized Preforked Rack Handler}
+  spec.summary       = %q{High Performance Preforked Rack Handler}
+  spec.description   = %q{High Performance and Optimized Preforked Rack Handler}
   spec.homepage      = "https://github.com/kazeburo/rhebok"
   spec.license       = "Artistic"
   spec.extensions    = %w[ext/rhebok/extconf.rb]
