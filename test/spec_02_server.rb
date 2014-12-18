@@ -40,6 +40,16 @@ describe Rhebok do
     response["rack.run_once"].should.equal false
   end
 
+  should "multiple header" do
+    GET("/")
+    header["Content-Type"].should.equal "text/yaml"
+    header["X-Foo"].should.equal "Foo, Bar"
+    header["X-Bar"].should.equal "Foo, Bar"
+    header["X-Baz"].should.equal "Baz"
+    header["X-Fuga"].should.equal "Fuga"
+  end
+
+
   should "have CGI headers on GET" do
     GET("/")
     response["REQUEST_METHOD"].should.equal "GET"

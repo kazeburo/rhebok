@@ -122,6 +122,12 @@ static VALUE remote_addr_key;
 static VALUE remote_port_key;
 static VALUE path_info_key;
 
+static VALUE vacant_string_val;
+static VALUE zero_string_val;
+
+static VALUE http10_val;
+static VALUE http11_val;
+
 struct common_header {
   const char * name;
   size_t name_len;
@@ -167,6 +173,17 @@ void set_common_header(const char * key, int key_len, const int raw)
   common_headers_num++;
 }
 
+static
+long find_lf(const char* v, ssize_t offset, ssize_t len)
+{
+  ssize_t i;
+  for ( i=offset; i != len; ++i) {
+    if (v[i] == 10) {
+      return i;
+    }
+  }
+  return len;
+}
 
 static
 size_t find_ch(const char* s, size_t len, char ch)
@@ -207,7 +224,7 @@ int store_path_info(VALUE env, const char* src, size_t src_len) {
   size_t dlen = 0, i = 0;
   char *d;
   char s2, s3;
-  d = (char*)malloc(src_len * 3 + 1);
+  d = ALLOC_N(char, src_len * 3 + 1);
   for (i = 0; i < src_len; i++ ) {
     if ( src[i] == '%' ) {
       if ( !isxdigit(src[i+1]) || !isxdigit(src[i+2]) ) {
@@ -231,7 +248,7 @@ int store_path_info(VALUE env, const char* src, size_t src_len) {
   }
   d[dlen]='0';
   rb_hash_aset(env, path_info_key, rb_str_new(d, dlen));
-  free(d);
+  xfree(d);
   return dlen;
 }
 
@@ -418,10 +435,8 @@ int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
 
   rb_hash_aset(env, request_method_key, rb_str_new(method,method_len));
   rb_hash_aset(env, request_uri_key, rb_str_new(path, path_len));
-  rb_hash_aset(env, script_name_key, rb_str_new2(""));
-  strcpy(tmp, "HTTP/1.");
-  tmp[7] = 48 + ((minor_version > 1 || minor_version < 0 ) ? 0 : minor_version);
-  rb_hash_aset(env, server_protocol_key, rb_str_new(tmp, sizeof("HTTP/1.0") - 1));
+  rb_hash_aset(env, script_name_key, vacant_string_val);
+  rb_hash_aset(env, server_protocol_key, (minor_version > 1 || minor_version < 0 ) ? http10_val : http11_val);
 
   /* PATH_INFO QUERY_STRING */
   path_len = find_ch(path, path_len, '#'); /* strip off all text after # after storing request_uri */
@@ -515,8 +530,8 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
     rb_hash_aset(env, remote_port_key, rb_String(rb_int_new(ntohs(cliaddr.sin_port))));
   }
   else {
-    rb_hash_aset(env, remote_addr_key, rb_str_new("",0));
-    rb_hash_aset(env, remote_port_key, rb_String(rb_int_new(0)));
+    rb_hash_aset(env, remote_addr_key, vacant_string_val);
+    rb_hash_aset(env, remote_port_key, zero_string_val);
   }
 
   buf_len = rv;
@@ -556,15 +571,23 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
 }
 
 static
-VALUE rhe_read_timeout(VALUE self, VALUE fileno, VALUE rbuf, VALUE len, VALUE offset, VALUE timeout) {
+VALUE rhe_read_timeout(VALUE self, VALUE filenov, VALUE rbuf, VALUE lenv, VALUE offsetv, VALUE timeoutv) {
   char * d;
   ssize_t rv;
-  d = malloc(len);
-  rv = _read_timeout(NUM2INT(fileno), NUM2DBL(timeout), &d[NUM2LONG(offset)], NUM2LONG(len));
+  int fileno;
+  double timeout;
+  ssize_t offset;
+  ssize_t len;
+  fileno = NUM2INT(filenov);
+  timeout = NUM2DBL(timeoutv);
+  offset = NUM2LONG(offsetv);
+  len = NUM2LONG(lenv);
+  d = ALLOC_N(char, len);
+  rv = _read_timeout(fileno, timeout, &d[offset], len);
   if ( rv > 0 ) {
     rb_str_cat(rbuf, d, rv);
   }
-  free(d);
+  xfree(d);
   return rb_int_new(rv);
 }
 
@@ -638,6 +661,10 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   VALUE key_obj;
   VALUE val_obj;
   char * key;
+  char * val;
+  ssize_t val_len;
+  ssize_t val_offset;
+  long val_lf;
   const char * message;
 
 
@@ -650,7 +677,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   rb_hash_foreach(headers, my_hash_keys, arr);
   hlen = RARRAY_LEN(arr);
   blen = RARRAY_LEN(body);
-  iovcnt = 10 + (hlen * 4) + blen;
+  iovcnt = 128 + (hlen * 4) + blen;
 
   {
     struct iovec v[iovcnt]; // Needs C99 compiler
@@ -694,20 +721,50 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       if ( strncasecmp(key,"Date",len) == 0 ) {
         date_pushed = 1;
       }
-      v[iovcnt].iov_base = key;
-      v[iovcnt].iov_len = len;
-      iovcnt++;
-      v[iovcnt].iov_base = ": ";
-      v[iovcnt].iov_len = sizeof(": ") - 1;
-      iovcnt++;
       /* value */
       val_obj = rb_hash_aref(headers, key_obj);
-      v[iovcnt].iov_base = RSTRING_PTR(val_obj);
-      v[iovcnt].iov_len = RSTRING_LEN(val_obj);
-      iovcnt++;
-      v[iovcnt].iov_base = "\r\n";
-      v[iovcnt].iov_len = sizeof("\r\n") - 1;
-      iovcnt++;
+      val = RSTRING_PTR(val_obj);
+      val_len = RSTRING_LEN(val_obj);
+      val_offset = 0;
+      val_lf = find_lf(val, val_offset, val_len);
+      if ( val_lf < val_len ) {
+        /* contain "\n" */
+        while ( val_offset < val_len ) {
+          // printf("'%s' val_len:%zd, val_offset:%zd, val_lf:%zd\n", &val[val_offset], val_len, val_offset, val_lf);
+          if ( val_offset != val_lf ) {
+            v[iovcnt].iov_base = key;
+            v[iovcnt].iov_len = len;
+            iovcnt++;
+            v[iovcnt].iov_base = ": ";
+            v[iovcnt].iov_len = sizeof(": ") - 1;
+            iovcnt++;
+            v[iovcnt].iov_base = &val[val_offset];
+            v[iovcnt].iov_len = val_lf - val_offset;
+            iovcnt++;
+            v[iovcnt].iov_base = "\r\n";
+            v[iovcnt].iov_len = sizeof("\r\n") - 1;
+            iovcnt++;
+          }
+          val_offset = val_lf + 1;
+          val_lf = find_lf(val, val_offset, val_len);
+        }
+      }
+      else {
+          v[iovcnt].iov_base = key;
+          v[iovcnt].iov_len = len;
+          iovcnt++;
+          v[iovcnt].iov_base = ": ";
+          v[iovcnt].iov_len = sizeof(": ") - 1;
+          iovcnt++;
+          v[iovcnt].iov_base = val;
+          v[iovcnt].iov_len = val_len;
+          iovcnt++;
+          v[iovcnt].iov_base = "\r\n";
+          v[iovcnt].iov_len = sizeof("\r\n") - 1;
+          iovcnt++;
+      }
+
+
     }
 
     if ( date_pushed == 0 ) {
@@ -771,11 +828,20 @@ void Init_rhebok()
   rb_gc_register_address(&server_protocol_key);
   query_string_key = rb_obj_freeze(rb_str_new2("QUERY_STRING"));
   rb_gc_register_address(&query_string_key);
-
   remote_addr_key = rb_obj_freeze(rb_str_new2("REMOTE_ADDR"));
   rb_gc_register_address(&remote_addr_key);
   remote_port_key = rb_obj_freeze(rb_str_new2("REMOTE_PORT"));
   rb_gc_register_address(&remote_port_key);
+
+  vacant_string_val = rb_obj_freeze(rb_str_new("",0));
+  rb_gc_register_address(&vacant_string_val);
+  zero_string_val = rb_obj_freeze(rb_str_new("0",1));
+  rb_gc_register_address(&zero_string_val);
+
+  http10_val = rb_obj_freeze(rb_str_new2("HTTP/1.0"));
+  rb_gc_register_address(&http10_val);
+  http11_val = rb_obj_freeze(rb_str_new2("HTTP/1.1"));
+  rb_gc_register_address(&http11_val);
 
   set_common_header("ACCEPT",sizeof("ACCEPT") - 1, 0);
   set_common_header("ACCEPT-ENCODING",sizeof("ACCEPT-ENCODING") - 1, 0);

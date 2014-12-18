@@ -13,11 +13,11 @@ class TestRequest
     minienv.delete_if { |k,v| NOSERIALIZE.any? { |c| v.kind_of?(c) } }
     body = minienv.to_yaml
     size = body.respond_to?(:bytesize) ? body.bytesize : body.size
-    [status, {"Content-Type" => "text/yaml", "Content-Length" => size.to_s}, [body]]
+    [status, {"Content-Type" => "text/yaml", "Content-Length" => size.to_s, "X-Foo" => "Foo\nBar", "X-Bar"=>"Foo\n\nBar", "X-Baz"=>"\nBaz", "X-Fuga"=>"Fuga\n"}, [body]]
   end
 
   module Helpers
-    attr_reader :status, :response
+    attr_reader :status, :response, :header
 
     ROOT = File.expand_path(File.dirname(__FILE__) + "/..")
     ENV["RUBYOPT"] = "-I#{ROOT}/lib -rubygems"
@@ -39,6 +39,7 @@ class TestRequest
         get.basic_auth user, passwd  if user && passwd
         http.request(get) { |response|
           @status = response.code.to_i
+          @header = response
           begin
             @response = YAML.load(response.body)
           rescue TypeError, ArgumentError
