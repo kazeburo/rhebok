@@ -28,7 +28,6 @@ module Rack
       NULLIO  = StringIO.new("").set_encoding('BINARY')
 
       def self.run(app, options={})
-        GC.disable
         slf = new(options)
         slf.setup_listener()
         slf.run_worker(app)
@@ -96,7 +95,6 @@ module Rack
         pe = PreforkEngine.new(pm_args)
         while !pe.signal_received.match(/^(TERM|USR1)$/)
           pe.start {
-           GC.disable
            srand
             self.accept_loop(app)
           }
