@@ -28,6 +28,7 @@ module Rack
       NULLIO  = StringIO.new("").set_encoding('BINARY')
 
       def self.run(app, options={})
+        GC.disable
         slf = new(options)
         slf.setup_listener()
         slf.run_worker(app)
@@ -95,6 +96,7 @@ module Rack
         pe = PreforkEngine.new(pm_args)
         while !pe.signal_received.match(/^(TERM|USR1)$/)
           pe.start {
+           GC.disable
            srand
             self.accept_loop(app)
           }
@@ -179,9 +181,9 @@ module Rack
 
               status_code, headers, body = app.call(env)
               if body.instance_of?(Array) then
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code, headers, body);
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code, headers, body)
               else
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code, headers, []);
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code, headers, [])
                 body.each do |part|
                   ret = ::Rhebok.write_all(connection, part, 0, @options[:Timeout])
                   if ret == nil then
@@ -189,6 +191,7 @@ module Rack
                   end
                 end #body.each
               end
+              #p [env,status_code,headers,body]
             ensure
               if buffer.instance_of?(Tempfile)
                 buffer.close!

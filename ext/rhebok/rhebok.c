@@ -120,6 +120,7 @@ static VALUE server_protocol_key;
 static VALUE query_string_key;
 static VALUE remote_addr_key;
 static VALUE remote_port_key;
+static VALUE path_info_key;
 
 struct common_header {
   const char * name;
@@ -206,7 +207,6 @@ int store_path_info(VALUE env, const char* src, size_t src_len) {
   size_t dlen = 0, i = 0;
   char *d;
   char s2, s3;
-
   d = (char*)malloc(src_len * 3 + 1);
   for (i = 0; i < src_len; i++ ) {
     if ( src[i] == '%' ) {
@@ -230,7 +230,7 @@ int store_path_info(VALUE env, const char* src, size_t src_len) {
     }
   }
   d[dlen]='0';
-  rb_hash_aset(env, rb_str_new2("PATH_INFO"), rb_str_new(d, dlen));
+  rb_hash_aset(env, path_info_key, rb_str_new(d, dlen));
   free(d);
   return dlen;
 }
@@ -573,7 +573,7 @@ VALUE rhe_write_timeout(VALUE self, VALUE fileno, VALUE buf, VALUE len, VALUE of
   char* d;
   ssize_t rv;
 
-  d = StringValuePtr(buf);
+  d = RSTRING_PTR(buf);
   rv = _write_timeout(NUM2INT(fileno), NUM2DBL(timeout), &d[NUM2LONG(offset)], NUM2LONG(len));
   if ( rv < 0 ) {
     return Qnil;
@@ -589,7 +589,7 @@ VALUE rhe_write_all(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE ti
   ssize_t rv = 0;
   ssize_t written = 0;
 
-  d = StringValuePtr(buf);
+  d = RSTRING_PTR(buf);
   buf_len = RSTRING_LEN(buf);
 
   written = 0;
@@ -608,6 +608,7 @@ VALUE rhe_write_all(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE ti
 
 static
 int my_hash_keys(VALUE key, VALUE val, VALUE ary) {
+  char * d = RSTRING_PTR(key);
   rb_ary_push(ary, key);
   return ST_CONTINUE;
 }
@@ -620,8 +621,8 @@ VALUE rhe_close(VALUE self, VALUE fileno) {
 
 static
 VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status_codev, VALUE headers, VALUE body) {
-  ssize_t hlen;
-  ssize_t blen;
+  ssize_t hlen = 0;
+  ssize_t blen = 0;
 
   ssize_t len;
   ssize_t rv = 0;
@@ -639,11 +640,13 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   char * key;
   const char * message;
 
+
   int fileno = NUM2INT(filenov);
   double timeout = NUM2DBL(timeoutv);
   int status_code = NUM2INT(status_codev);
 
   arr = rb_ary_new();
+  RB_GC_GUARD(arr);
   rb_hash_foreach(headers, my_hash_keys, arr);
   hlen = RARRAY_LEN(arr);
   blen = RARRAY_LEN(body);
@@ -680,7 +683,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
     date_pushed = 0;
     for ( i = 0; i < hlen; i++ ) {
       key_obj = rb_ary_entry(arr, i);
-      key = StringValuePtr(key_obj);
+      key = RSTRING_PTR(key_obj);
       len = RSTRING_LEN(key_obj);
       if ( strncasecmp(key,"Connection",len) == 0 ) {
         continue;
@@ -699,7 +702,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       iovcnt++;
       /* value */
       val_obj = rb_hash_aref(headers, key_obj);
-      v[iovcnt].iov_base = StringValuePtr(val_obj);
+      v[iovcnt].iov_base = RSTRING_PTR(val_obj);
       v[iovcnt].iov_len = RSTRING_LEN(val_obj);
       iovcnt++;
       v[iovcnt].iov_base = "\r\n";
@@ -717,9 +720,9 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
     v[iovcnt].iov_len = sizeof("\r\n") - 1;
     iovcnt++;
 
-    for (i=0; i < blen; i++ ) {
+    for ( i=0; i<blen; i++) {
       val_obj = rb_ary_entry(body, i);
-      v[iovcnt].iov_base = StringValuePtr(val_obj);
+      v[iovcnt].iov_base = RSTRING_PTR(val_obj);
       v[iovcnt].iov_len = RSTRING_LEN(val_obj);
       iovcnt++;
     }
@@ -747,6 +750,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       }
     }
   }
+
   if ( rv < 0 ) {
     return Qnil;
   }
@@ -757,6 +761,8 @@ void Init_rhebok()
 {
   request_method_key = rb_obj_freeze(rb_str_new2("REQUEST_METHOD"));
   rb_gc_register_address(&request_method_key);
+  path_info_key = rb_obj_freeze(rb_str_new2("PATH_INFO"));
+  rb_gc_register_address(&path_info_key);
   request_uri_key = rb_obj_freeze(rb_str_new2("REQUEST_URI"));
   rb_gc_register_address(&request_uri_key);
   script_name_key = rb_obj_freeze(rb_str_new2("SCRIPT_NAME"));
