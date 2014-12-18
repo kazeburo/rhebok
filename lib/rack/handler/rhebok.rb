@@ -135,7 +135,8 @@ module Rack
           "rack.multithread"  => false,
           "rack.multiprocess" => true,
           "rack.run_once"     => false,
-          "rack.url_scheme"   => "http"
+          "rack.url_scheme"   => "http",
+          "rack.input"        => NULLIO
         }
 
         while proc_req_count < max_reqs
@@ -148,10 +149,9 @@ module Rack
             begin
               proc_req_count += 1
               @can_exit = false
-              # force donwgrade to 1.0
-              env["SERVER_PROTOCOL"] = "HTTP/1.0"
               # handle request
-              if (cl = env["CONTENT_LENGTH"].to_i) > 0 then
+              if env.key?("CONTENT_LENGTH") && env["CONTENT_LENGTH"].to_i > 0 then
+                cl = env["CONTENT_LENGTH"].to_i;
                 if cl > MAX_MEMORY_BUFFER_SIZE
                   buffer = Tempfile.open('r')
                   buffer.binmode
@@ -175,8 +175,6 @@ module Rack
                 end
                 buffer.rewind
                 env["rack.input"] = buffer
-              else
-                env["rack.input"] = NULLIO
               end
 
               status_code, headers, body = app.call(env)

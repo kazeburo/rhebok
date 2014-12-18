@@ -27,7 +27,7 @@ describe Rhebok do
   should "be a Rhebok" do
     GET("/")
     status.should.equal 200
-    response["SERVER_PROTOCOL"].should.equal "HTTP/1.0"
+    response["SERVER_PROTOCOL"].should.equal "HTTP/1.1"
     response["SERVER_PORT"].should.equal "9202"
     response["SERVER_NAME"].should.equal "127.0.0.1"
   end

@@ -300,7 +300,6 @@ ssize_t _read_timeout(const int fileno, const double timeout, char * read_buf, c
   if ( rv < 0 && errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK ) {
     return rv;
   }
- WAIT_READ:
   while (1) {
     nfound = poll(rfds, 1, (int)timeout*1000);
     if ( nfound == 1 ) {
@@ -326,7 +325,6 @@ ssize_t _write_timeout(const int fileno, const double timeout, char * write_buf,
   if ( rv < 0 && errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK ) {
     return rv;
   }
- WAIT_WRITE:
   while (1) {
     wfds[0].fd = fileno;
     wfds[0].events = POLLOUT;
@@ -397,8 +395,6 @@ int _date_line(char * date_line) {
   date_line[i++] = 10;
   return i;
 }
-
-
 
 static
 int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
@@ -513,7 +509,7 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
     goto badexit;
   }
 
-  if ( IMMEDIATE_P(tcp) ) {
+  if ( tcp == Qtrue ) {
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
     rb_hash_aset(env, remote_addr_key, rb_str_new2(inet_ntoa(cliaddr.sin_addr)));
     rb_hash_aset(env, remote_port_key, rb_String(rb_int_new(ntohs(cliaddr.sin_port))));
@@ -551,7 +547,7 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
     buf_len += rv;
   }
 
-  req = rb_ary_new2(3);
+  req = rb_ary_new2(2);
   rb_ary_push(req, rb_int_new(fd));
   rb_ary_push(req, rb_str_new(&read_buf[reqlen],buf_len - reqlen));
   return req;
