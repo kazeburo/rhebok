@@ -11,7 +11,8 @@ Gem::Specification.new do |spec|
   spec.summary       = %q{High Perfomance Preforked Rack Handler}
   spec.description   = %q{High Perfomance and Optimized Preforked Rack Handler}
   spec.homepage      = "https://github.com/kazeburo/rhebok"
-  spec.license       = "MIT"
+  spec.license       = "Artistic"
+  spec.extensions    = %w[ext/rhebok/extconf.rb]
 
   spec.files         = `git ls-files -z`.split("\x0")
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
