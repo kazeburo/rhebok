@@ -105,9 +105,10 @@ module Rack
       def _calc_reqs_per_child
         max = @options[:MaxRequestPerChild].to_i
         if min = @options[:MinRequestPerChild] then
+          return max.to_i if min.to_i >= max
           return (max - (max - min.to_i + 1) * rand).to_i
         end
-        return max.to_i
+        return max
       end
 
       def accept_loop(app)
@@ -139,7 +140,7 @@ module Rack
           "rack.input"        => NULLIO
         }
 
-        while proc_req_count < max_reqs
+        while @options[:MaxRequestPerChild].to_i == 0 || proc_req_count < max_reqs
           @can_exit = true
           env = env_template.clone
           connection, buf = ::Rhebok.accept_rack(fileno, @options[:Timeout], @_is_tcp, env)

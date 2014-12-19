@@ -62,11 +62,11 @@ command line of running Rhebok
 
 ### Host
 
-hostname or ip address to bind
+hostname or ip address to bind (default: 0.0.0.0)
 
 ### Port
 
-port to bind
+port to bind (default: 9292)
 
 ### MaxWorkers
 
@@ -75,7 +75,7 @@ number of worker processes (default: 10)
 ### MaxRequestPerChild
 
 max. number of requests to be handled before a worker process exits (default: 1000)
-This option looks like Apache's MaxRequestPerChild
+If set to `0`. worker never exists. This option looks like Apache's MaxRequestPerChild
 
 ### MinRequestPerChild
 
