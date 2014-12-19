@@ -1,3 +1,8 @@
+0.0.5 2014-12-19T11:06:28Z
+
+    - support MaxRequestPerChild=0. worker never exit.
+    - refactor around res header
+
 0.0.4 2014-12-19-T01:50:11Z
 
     - support multiple line header
