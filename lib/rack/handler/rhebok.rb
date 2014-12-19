@@ -94,21 +94,22 @@ module Rack
 
         pe = PreforkEngine.new(pm_args)
         while !pe.signal_received.match(/^(TERM|USR1)$/)
-          pe.start {
-           srand
+          pe.start do
+            srand
             self.accept_loop(app)
-          }
+          end
         end
         pe.wait_all_children
       end
 
       def _calc_reqs_per_child
         max = @options[:MaxRequestPerChild].to_i
-        if min = @options[:MinRequestPerChild]
-          return max.to_i if min.to_i >= max
-          return (max - (max - min.to_i + 1) * rand).to_i
+        min = @options[:MinRequestPerChild].to_i
+        if min < max
+          max - ((max - min + 1) * rand).to_i
+        else
+          max
         end
-        return max
       end
 
       def accept_loop(app)
@@ -152,7 +153,7 @@ module Rack
               @can_exit = false
               # handle request
               if env.key?("CONTENT_LENGTH") && env["CONTENT_LENGTH"].to_i > 0
-                cl = env["CONTENT_LENGTH"].to_i;
+                cl = env["CONTENT_LENGTH"].to_i
                 if cl > MAX_MEMORY_BUFFER_SIZE
                   buffer = Tempfile.open('r')
                   buffer.binmode
@@ -207,6 +208,3 @@ module Rack
     end
   end
 end
-
-
-
