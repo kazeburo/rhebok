@@ -630,9 +630,31 @@ VALUE rhe_write_all(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE ti
 }
 
 static
-int my_hash_keys(VALUE key, VALUE val, VALUE ary) {
-  char * d = RSTRING_PTR(key);
-  rb_ary_push(ary, key);
+int header_to_array(VALUE key_obj, VALUE val_obj, VALUE ary) {
+  ssize_t val_len;
+  ssize_t val_offset;
+  long val_lf;
+  char * val;
+
+  val = RSTRING_PTR(val_obj);
+  val_len = RSTRING_LEN(val_obj);
+  val_offset = 0;
+  val_lf = find_lf(val, val_offset, val_len);
+  if ( val_lf < val_len ) {
+    /* contain "\n" */
+    while ( val_offset < val_len ) {
+      if ( val_offset != val_lf ) {
+        rb_ary_push(ary, key_obj);
+        rb_ary_push(ary, rb_str_new(&val[val_offset],val_lf - val_offset));
+      }
+      val_offset = val_lf + 1;
+      val_lf = find_lf(val, val_offset, val_len);
+    }
+  }
+  else {
+    rb_ary_push(ary, key_obj);
+    rb_ary_push(ary, val_obj);
+  }
   return ST_CONTINUE;
 }
 
@@ -647,7 +669,6 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   ssize_t hlen = 0;
   ssize_t blen = 0;
 
-  ssize_t len;
   ssize_t rv = 0;
   ssize_t iovcnt;
   ssize_t vec_offset;
@@ -657,27 +678,23 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   char status_line[512];
   char date_line[512];
   int date_pushed = 0;
-  VALUE arr;
+  VALUE harr;
   VALUE key_obj;
   VALUE val_obj;
   char * key;
-  char * val;
-  ssize_t val_len;
-  ssize_t val_offset;
-  long val_lf;
+  ssize_t key_len;
   const char * message;
-
 
   int fileno = NUM2INT(filenov);
   double timeout = NUM2DBL(timeoutv);
   int status_code = NUM2INT(status_codev);
 
-  arr = rb_ary_new();
-  RB_GC_GUARD(arr);
-  rb_hash_foreach(headers, my_hash_keys, arr);
-  hlen = RARRAY_LEN(arr);
+  harr = rb_ary_new();
+  RB_GC_GUARD(harr);
+  rb_hash_foreach(headers, header_to_array, harr);
+  hlen = RARRAY_LEN(harr);
   blen = RARRAY_LEN(body);
-  iovcnt = 128 + (hlen * 4) + blen;
+  iovcnt = 10 + (hlen * 2) + blen;
 
   {
     struct iovec v[iovcnt]; // Needs C99 compiler
@@ -709,62 +726,35 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
 
     date_pushed = 0;
     for ( i = 0; i < hlen; i++ ) {
-      key_obj = rb_ary_entry(arr, i);
+      key_obj = rb_ary_entry(harr, i);
       key = RSTRING_PTR(key_obj);
-      len = RSTRING_LEN(key_obj);
-      if ( strncasecmp(key,"Connection",len) == 0 ) {
+      key_len = RSTRING_LEN(key_obj);
+      if ( strncasecmp(key,"Connection",key_len) == 0 ) {
+        i++;
         continue;
       }
-      if ( strncasecmp(key,"Server",len) == 0 ) {
+      if ( strncasecmp(key,"Server",key_len) == 0 ) {
         v[1].iov_len -= (sizeof("Server: Rhebok\r\n") - 1);
       }
-      if ( strncasecmp(key,"Date",len) == 0 ) {
+      if ( strncasecmp(key,"Date",key_len) == 0 ) {
         date_pushed = 1;
       }
+      v[iovcnt].iov_base = key;
+      v[iovcnt].iov_len = key_len;
+      iovcnt++;
+      v[iovcnt].iov_base = ": ";
+      v[iovcnt].iov_len = sizeof(": ") - 1;
+      iovcnt++;
+
       /* value */
-      val_obj = rb_hash_aref(headers, key_obj);
-      val = RSTRING_PTR(val_obj);
-      val_len = RSTRING_LEN(val_obj);
-      val_offset = 0;
-      val_lf = find_lf(val, val_offset, val_len);
-      if ( val_lf < val_len ) {
-        /* contain "\n" */
-        while ( val_offset < val_len ) {
-          // printf("'%s' val_len:%zd, val_offset:%zd, val_lf:%zd\n", &val[val_offset], val_len, val_offset, val_lf);
-          if ( val_offset != val_lf ) {
-            v[iovcnt].iov_base = key;
-            v[iovcnt].iov_len = len;
-            iovcnt++;
-            v[iovcnt].iov_base = ": ";
-            v[iovcnt].iov_len = sizeof(": ") - 1;
-            iovcnt++;
-            v[iovcnt].iov_base = &val[val_offset];
-            v[iovcnt].iov_len = val_lf - val_offset;
-            iovcnt++;
-            v[iovcnt].iov_base = "\r\n";
-            v[iovcnt].iov_len = sizeof("\r\n") - 1;
-            iovcnt++;
-          }
-          val_offset = val_lf + 1;
-          val_lf = find_lf(val, val_offset, val_len);
-        }
-      }
-      else {
-          v[iovcnt].iov_base = key;
-          v[iovcnt].iov_len = len;
-          iovcnt++;
-          v[iovcnt].iov_base = ": ";
-          v[iovcnt].iov_len = sizeof(": ") - 1;
-          iovcnt++;
-          v[iovcnt].iov_base = val;
-          v[iovcnt].iov_len = val_len;
-          iovcnt++;
-          v[iovcnt].iov_base = "\r\n";
-          v[iovcnt].iov_len = sizeof("\r\n") - 1;
-          iovcnt++;
-      }
-
-
+      i++;
+      val_obj = rb_ary_entry(harr, i);
+      v[iovcnt].iov_base = RSTRING_PTR(val_obj);
+      v[iovcnt].iov_len = RSTRING_LEN(val_obj);
+      iovcnt++;
+      v[iovcnt].iov_base = "\r\n";
+      v[iovcnt].iov_len = sizeof("\r\n") - 1;
+      iovcnt++;
     }
 
     if ( date_pushed == 0 ) {

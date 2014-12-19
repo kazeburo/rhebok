@@ -6,14 +6,23 @@ class TestRequest
   NOSERIALIZE = [Method, Proc, Rack::Lint::InputWrapper]
 
   def call(env)
+
+    test_header = {};
     status = env["QUERY_STRING"] =~ /secret/ ? 403 : 200
+    if env["PATH_INFO"] =~ /date/ then
+      test_header["Date"] = "Foooo"
+    end
+    if env["PATH_INFO"] =~ /connection/ then
+      test_header["Connection"] = "keepalive"
+    end
     env["test.postdata"] = env["rack.input"].read
     minienv = env.dup
     # This may in the future want to replace with a dummy value instead.
     minienv.delete_if { |k,v| NOSERIALIZE.any? { |c| v.kind_of?(c) } }
     body = minienv.to_yaml
     size = body.respond_to?(:bytesize) ? body.bytesize : body.size
-    [status, {"Content-Type" => "text/yaml", "Content-Length" => size.to_s, "X-Foo" => "Foo\nBar", "X-Bar"=>"Foo\n\nBar", "X-Baz"=>"\nBaz", "X-Fuga"=>"Fuga\n"}, [body]]
+    res_header = {"Content-Type" => "text/yaml", "Content-Length" => size.to_s, "X-Foo" => "Foo\nBar", "X-Bar"=>"Foo\n\nBar", "X-Baz"=>"\nBaz", "X-Fuga"=>"Fuga\n"}
+    [status, res_header.merge(test_header), [body]]
   end
 
   module Helpers

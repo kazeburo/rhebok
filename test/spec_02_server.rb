@@ -49,6 +49,17 @@ describe Rhebok do
     header["X-Fuga"].should.equal "Fuga"
   end
 
+  should "date header" do
+    GET("/date")
+    header["Date"].should.equal "Foooo"
+  end
+
+  should "ignore connection header" do
+    GET("/connection")
+    header["Connection"].should.equal "close"
+    header["Content-Type"].should.equal "text/yaml"
+    header["Date"].should.match(/20/)
+  end
 
   should "have CGI headers on GET" do
     GET("/")
