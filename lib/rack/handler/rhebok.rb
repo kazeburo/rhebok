@@ -48,9 +48,9 @@ module Rack
       end
 
       def setup_listener()
-        if ENV["SERVER_STARTER_PORT"] then
+        if ENV["SERVER_STARTER_PORT"]
           hostport, fd = ENV["SERVER_STARTER_PORT"].split("=",2)
-          if m = hostport.match(/(.*):(\d+)/) then
+          if m = hostport.match(/(.*):(\d+)/)
             @options[:Host] = m[0]
             @options[:Port] = m[1].to_i
           else
@@ -67,7 +67,7 @@ module Rack
           @_is_tcp = true
         end
 
-        if RUBY_PLATFORM.match(/linux/) && @_is_tcp == true then
+        if RUBY_PLATFORM.match(/linux/) && @_is_tcp == true
           begin
             @server.setsockopt(Socket::IPPROTO_TCP, 9, 1)
             @_using_defer_accept = true
@@ -83,32 +83,33 @@ module Rack
             "HUP"  => 'TERM',
           },
         }
-        if @options[:SpawnInterval] then
+        if @options[:SpawnInterval]
           pm_args["trap_signals"]["USR1"] = ["TERM", @options[:SpawnInterval].to_i]
           pm_args["spawn_interval"] = @options[:SpawnInterval].to_i
         end
-        if @options[:ErrRespawnInterval] then
+        if @options[:ErrRespawnInterval]
           pm_args["err_respawn_interval"] = @options[:ErrRespawnInterval].to_i
         end
         Signal.trap('INT','SYSTEM_DEFAULT') # XXX
 
         pe = PreforkEngine.new(pm_args)
         while !pe.signal_received.match(/^(TERM|USR1)$/)
-          pe.start {
-           srand
+          pe.start do
+            srand
             self.accept_loop(app)
-          }
+          end
         end
         pe.wait_all_children
       end
 
       def _calc_reqs_per_child
         max = @options[:MaxRequestPerChild].to_i
-        if min = @options[:MinRequestPerChild] then
-          return max.to_i if min.to_i >= max
-          return (max - (max - min.to_i + 1) * rand).to_i
+        min = @options[:MinRequestPerChild].to_i
+        if min < max
+          max - ((max - min + 1) * rand).to_i
+        else
+          max
         end
-        return max
       end
 
       def accept_loop(app)
@@ -117,10 +118,10 @@ module Rack
         proc_req_count = 0
         Signal.trap(:TERM) do
           @term_received += 1
-          if @can_exit then
+          if @can_exit
             exit!(true)
           end
-          if @can_exit || @term_received > 1 then
+          if @can_exit || @term_received > 1
             exit!(true)
           end
         end
@@ -144,15 +145,15 @@ module Rack
           @can_exit = true
           env = env_template.clone
           connection, buf = ::Rhebok.accept_rack(fileno, @options[:Timeout], @_is_tcp, env)
-          if connection then
+          if connection
             # for tempfile
             buffer = nil
             begin
               proc_req_count += 1
               @can_exit = false
               # handle request
-              if env.key?("CONTENT_LENGTH") && env["CONTENT_LENGTH"].to_i > 0 then
-                cl = env["CONTENT_LENGTH"].to_i;
+              if env.key?("CONTENT_LENGTH") && env["CONTENT_LENGTH"].to_i > 0
+                cl = env["CONTENT_LENGTH"].to_i
                 if cl > MAX_MEMORY_BUFFER_SIZE
                   buffer = Tempfile.open('r')
                   buffer.binmode
@@ -162,12 +163,12 @@ module Rack
                 end
                 while cl > 0
                   chunk = ""
-                  if buf.bytesize > 0 then
+                  if buf.bytesize > 0
                     chunk = buf
                     buf = ""
                   else
                     readed = ::Rhebok.read_timeout(connection, chunk, cl, 0, @options[:Timeout])
-                    if readed == nil then
+                    if readed == nil
                       return
                     end
                   end
@@ -179,13 +180,13 @@ module Rack
               end
 
               status_code, headers, body = app.call(env)
-              if body.instance_of?(Array) then
+              if body.instance_of?(Array)
                 ::Rhebok.write_response(connection, @options[:Timeout], status_code, headers, body)
               else
                 ::Rhebok.write_response(connection, @options[:Timeout], status_code, headers, [])
                 body.each do |part|
                   ret = ::Rhebok.write_all(connection, part, 0, @options[:Timeout])
-                  if ret == nil then
+                  if ret == nil
                     break
                   end
                 end #body.each
@@ -198,7 +199,7 @@ module Rack
               ::Rhebok.close_rack(connection)
             end #begin
           end # accept
-          if @term_received > 0 then
+          if @term_received > 0
             exit!(true)
           end
         end #while max_reqs
@@ -207,6 +208,3 @@ module Rack
     end
   end
 end
-
-
-
