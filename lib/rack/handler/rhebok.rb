@@ -11,6 +11,13 @@ require 'io/nonblock'
 require 'prefork_engine'
 require 'rhebok'
 
+$RACK_HANDLER_RHEBOK_GCTOOL = true
+begin
+  require 'gctools/oobgc'
+rescue LoadError
+  $RACK_HANDLER_RHEBOK_GCTOOL = false
+end
+
 module Rack
   module Handler
     class Rhebok
@@ -23,7 +30,10 @@ module Rack
         :MaxRequestPerChild => 1000,
         :MinRequestPerChild => nil,
         :SpawnInterval => nil,
-        :ErrRespawnInterval => nil
+        :ErrRespawnInterval => nil,
+        :OobGC => false,
+        :MaxGCPerRequest => 5,
+        :MinGCPerRequest => nil,
       }
       NULLIO  = StringIO.new("").set_encoding('BINARY')
 
@@ -41,7 +51,11 @@ module Rack
       end
 
       def initialize(options={})
+        if options[:OobGC].instance_of?(String)
+          options[:OobGC] = options[:OobGC].match(/^(true|yes|1)$/i) ? true : false
+        end
         @options = DEFAULT_OPTIONS.merge(options)
+        p @options[:OobGC]
         @server = nil
         @_is_tcp = false
         @_using_defer_accept = false
@@ -103,6 +117,9 @@ module Rack
       end
 
       def _calc_reqs_per_child
+        if @options[:MinRequestPerChild] == nil
+          return @options[:MaxRequestPerChild].to_i
+        end
         max = @options[:MaxRequestPerChild].to_i
         min = @options[:MinRequestPerChild].to_i
         if min < max
@@ -111,6 +128,20 @@ module Rack
           max
         end
       end
+
+      def _calc_gc_per_req
+        if @options[:MinGCPerRequest] == nil
+          return @options[:MaxGCPerRequest].to_i
+        end
+        max = @options[:MaxGCPerRequest].to_i
+        min = @options[:MinGCPerRequest].to_i
+        if min < max
+          max - ((max - min + 1) * rand).to_i
+        else
+          max
+        end
+      end
+
 
       def accept_loop(app)
         @can_exit = true
@@ -127,6 +158,7 @@ module Rack
         end
         Signal.trap(:PIPE, "IGNORE")
         max_reqs = self._calc_reqs_per_child()
+        gc_reqs = self._calc_gc_per_req()
         fileno = @server.fileno
 
         env_template = {
@@ -197,6 +229,16 @@ module Rack
                 buffer.close!
               end
               ::Rhebok.close_rack(connection)
+              # out of band gc
+              if @options[:OobGC]
+                if $RACK_HANDLER_RHEBOK_GCTOOL
+                  GC::OOB.run
+                elsif proc_req_count % gc_reqs == 0
+                  disabled = GC.enable
+                  GC.start
+                  GC.disable if disabled
+                end
+              end
             end #begin
           end # accept
           if @term_received > 0

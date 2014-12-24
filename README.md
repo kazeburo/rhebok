@@ -12,6 +12,7 @@ Rhebok supports following features.
 - prefork and graceful shutdown using prefork_engine
 - hot deploy and unix domain socket using start_server
 - only supports HTTP/1.0. But does not support Keepalive.
+- supports OobGC
 
 This server is suitable for running HTTP application servers behind a reverse proxy like nginx.
 
@@ -33,7 +34,7 @@ Or install it yourself as:
 
 ## Usage
 
-    $ rackup -s Rhebok -O Port=8080 -O MaxWorkers=10 -O MaxRequestPerChild=1000 -E production config.ru
+    $ rackup -s Rhebok -O Port=8080 -O MaxWorkers=10 -O MaxRequestPerChild=1000 -O OobGC=yes -E production config.ru
 
 ## Sample configuration with Nginx
 
@@ -74,7 +75,7 @@ number of worker processes (default: 10)
 
 ### MaxRequestPerChild
 
-max. number of requests to be handled before a worker process exits (default: 1000)
+Max number of requests to be handled before a worker process exits (default: 1000)
 If set to `0`. worker never exists. This option looks like Apache's MaxRequestPerChild
 
 ### MinRequestPerChild
@@ -84,6 +85,20 @@ if set, randomizes the number of requests handled by a single worker process bet
 ### Timeout
 
 seconds until timeout (default: 300)
+
+### OobGC
+
+Boolean like string. If true, Rhebok execute GC after close client socket. (defualt: false)
+
+### MaxGCPerRequest
+
+If [gctools](https://github.com/tmm1/gctools) is available, this option is not used. invoke GC by `GC::OOB.run` after every requests.
+
+Max number of request before invoking GC (defualt: 5)
+
+### MinGCPerRequest
+
+If set, randomizes the number of request before invoking GC between the number of MaxGCPerRequest (defualt: none)
 
 ### SpawnInterval
 
