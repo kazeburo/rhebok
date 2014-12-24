@@ -1,3 +1,7 @@
+0.0.6 2014-12-24T13:19:50Z
+
+    - support OobGC
+
 0.0.5 2014-12-19T11:06:28Z
 
     - support MaxRequestPerChild=0. worker never exit.
