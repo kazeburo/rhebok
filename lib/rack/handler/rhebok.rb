@@ -25,6 +25,7 @@ module Rack
       DEFAULT_OPTIONS = {
         :Host => '0.0.0.0',
         :Port => 9292,
+        :Path => nil,
         :MaxWorkers => 10,
         :Timeout => 300,
         :MaxRequestPerChild => 1000,
@@ -34,6 +35,7 @@ module Rack
         :OobGC => false,
         :MaxGCPerRequest => 5,
         :MinGCPerRequest => nil,
+        :BackLog => nil,
       }
       NULLIO  = StringIO.new("").set_encoding('BINARY')
 
@@ -55,7 +57,6 @@ module Rack
           options[:OobGC] = options[:OobGC].match(/^(true|yes|1)$/i) ? true : false
         end
         @options = DEFAULT_OPTIONS.merge(options)
-        p @options[:OobGC]
         @server = nil
         @_is_tcp = false
         @_using_defer_accept = false
@@ -75,10 +76,33 @@ module Rack
         end
 
         if @server == nil
-          puts "Rhebok starts Listening on #{@options[:Host]}:#{@options[:Port]} Pid:#{$$}"
-          @server = TCPServer.new(@options[:Host], @options[:Port])
-          @server.setsockopt(:SOCKET, :REUSEADDR, 1)
-          @_is_tcp = true
+          if @options[:Path] != nil
+            if ::File.socket?(@options[:Path])
+              puts "removing existing socket file:#{@options[:Path]}";
+              ::File.unlink(@options[:Path])
+            end
+            begin
+              ::File.unlink(@options[:Path])
+            rescue
+              #ignore
+            end
+            puts "Rhebok starts Listening on :unix:#{@options[:Path]} Pid:#{$$}"
+            oldmask = ::File.umask(0)
+            @server = UNIXServer.open(@options[:Path])
+            if @options[:BackLog] != nil
+              @server.listen(@options[:BackLog].to_i)
+            end
+            ::File.umask(oldmask)
+            @_is_tcp = false
+          else
+            puts "Rhebok starts Listening on #{@options[:Host]}:#{@options[:Port]} Pid:#{$$}"
+            @server = TCPServer.open(@options[:Host], @options[:Port])
+            @server.setsockopt(:SOCKET, :REUSEADDR, 1)
+            if @options[:BackLog] != nil
+              @server.listen(@options[:BackLog].to_i)
+            end
+            @_is_tcp = true
+          end
         end
 
         if RUBY_PLATFORM.match(/linux/) && @_is_tcp == true
