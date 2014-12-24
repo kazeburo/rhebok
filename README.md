@@ -69,6 +69,14 @@ hostname or ip address to bind (default: 0.0.0.0)
 
 port to bind (default: 9292)
 
+### Path
+
+path to listen using unix socket
+
+### BackLog
+
+specifies a listen backlog parameter
+
 ### MaxWorkers
 
 number of worker processes (default: 10)

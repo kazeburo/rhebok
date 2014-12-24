@@ -89,19 +89,18 @@ module Rack
             puts "Rhebok starts Listening on :unix:#{@options[:Path]} Pid:#{$$}"
             oldmask = ::File.umask(0)
             @server = UNIXServer.open(@options[:Path])
-            if @options[:BackLog] != nil
-              @server.listen(@options[:BackLog].to_i)
-            end
             ::File.umask(oldmask)
             @_is_tcp = false
+            @options[:Host] = "0.0.0.0"
+            @options[:Port] = 0
           else
             puts "Rhebok starts Listening on #{@options[:Host]}:#{@options[:Port]} Pid:#{$$}"
             @server = TCPServer.open(@options[:Host], @options[:Port])
             @server.setsockopt(:SOCKET, :REUSEADDR, 1)
-            if @options[:BackLog] != nil
-              @server.listen(@options[:BackLog].to_i)
-            end
             @_is_tcp = true
+          end
+          if @options[:BackLog] != nil
+            @server.listen(@options[:BackLog].to_i)
           end
         end
 
