@@ -26,6 +26,7 @@ describe Rhebok do
     response = YAML.load(body)
 
     should "unix domain" do
+      header.should.not.be.nil
       response["rack.version"].should.equal [1,1]
       response["rack.url_scheme"].should.equal "http"
       response["SERVER_NAME"].should.equal "0.0.0.0"
