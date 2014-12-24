@@ -10,7 +10,7 @@ Rhebok supports following features.
 - uses accept4(2) if OS support
 - uses writev(2) for output responses
 - prefork and graceful shutdown using prefork_engine
-- hot deploy and unix domain socket using start_server
+- hot deploy using start_server
 - only supports HTTP/1.0. But does not support Keepalive.
 - supports OobGC
 
