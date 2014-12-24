@@ -1,3 +1,7 @@
+0.0.7 2014-12-24T16:25:22Z
+
+    - support unix domain socket directly
+
 0.0.6 2014-12-24T13:19:50Z
 
     - support OobGC
