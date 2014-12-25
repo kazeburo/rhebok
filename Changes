@@ -1,3 +1,7 @@
+0.1.2 2014-12-25T17:33:59Z
+
+    - oops. status_code.to_i is required
+
 0.1.1 2014-12-25T17:19:31Z
 
     - added close for body
