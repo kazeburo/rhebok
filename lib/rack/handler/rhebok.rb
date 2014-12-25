@@ -236,9 +236,9 @@ module Rack
 
               status_code, headers, body = app.call(env)
               if body.instance_of?(Array)
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code, headers, body)
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, body)
               else
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code, headers, [])
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, [])
                 body.each do |part|
                   ret = ::Rhebok.write_all(connection, part, 0, @options[:Timeout])
                   if ret == nil
