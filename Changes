@@ -1,3 +1,8 @@
+0.0.8 2014-12-25T15:23:41Z
+
+    - tweek Header order
+    - require ruby >= 2.0
+
 0.0.7 2014-12-24T16:25:22Z
 
     - support unix domain socket directly
