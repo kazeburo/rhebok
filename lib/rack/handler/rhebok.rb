@@ -245,7 +245,7 @@ module Rack
                     break
                   end
                 end #body.each
-                body.close()
+                body.respond_to?(:close) and body.close
               end
               #p [env,status_code,headers,body]
             ensure
