@@ -677,6 +677,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   int i;
   char status_line[512];
   char date_line[512];
+  char server_line[1032];
   int date_pushed = 0;
   VALUE harr;
   VALUE key_obj;
@@ -684,6 +685,10 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   char * key;
   ssize_t key_len;
   const char * message;
+
+  const char * s;
+  char* d;
+  ssize_t n;
 
   int fileno = NUM2INT(filenov);
   double timeout = NUM2DBL(timeoutv);
@@ -720,8 +725,11 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
     v[iovcnt].iov_len = i;
     iovcnt++;
 
-    v[iovcnt].iov_base = "Connection: close\r\nServer: Rhebok\r\n";
-    v[iovcnt].iov_len = sizeof("Connection: close\r\nServer: Rhebok\r\n")-1;
+    /* for date header */
+    iovcnt++;
+
+    v[iovcnt].iov_base = "Server: Rhebok\r\n";
+    v[iovcnt].iov_len = sizeof("Server: Rhebok\r\n")-1;
     iovcnt++;
 
     date_pushed = 0;
@@ -729,16 +737,38 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       key_obj = rb_ary_entry(harr, i);
       key = RSTRING_PTR(key_obj);
       key_len = RSTRING_LEN(key_obj);
+      i++;
+
       if ( strncasecmp(key,"Connection",key_len) == 0 ) {
-        i++;
+        continue;
+      }
+
+      val_obj = rb_ary_entry(harr, i);
+
+      if ( strncasecmp(key,"Date",key_len) == 0 ) {
+        strcpy(date_line, "Date: ");
+        for ( s=RSTRING_PTR(val_obj), n = RSTRING_LEN(val_obj), d=date_line+sizeof("Date: ")-1; n !=0; s++, --n, d++) {
+          *d = *s;
+        }
+        date_line[sizeof("Date: ") -1 + RSTRING_LEN(val_obj)] = 13;
+        date_line[sizeof("Date: ") -1 + RSTRING_LEN(val_obj) + 1] = 10;
+        v[1].iov_base = date_line;
+        v[1].iov_len = sizeof("Date: ") -1 + RSTRING_LEN(val_obj) + 2;
+        date_pushed = 1;
         continue;
       }
       if ( strncasecmp(key,"Server",key_len) == 0 ) {
-        v[1].iov_len -= (sizeof("Server: Rhebok\r\n") - 1);
+        strcpy(server_line, "Server: ");
+        for ( s=RSTRING_PTR(val_obj), n = RSTRING_LEN(val_obj), d=server_line+sizeof("Server: ")-1; n !=0; s++, --n, d++) {
+          *d = *s;
+        }
+        server_line[sizeof("Server: ") -1 + RSTRING_LEN(val_obj)] = 13;
+        server_line[sizeof("Server: ") -1 + RSTRING_LEN(val_obj) + 1] = 10;
+        v[2].iov_base = server_line;
+        v[2].iov_len = sizeof("Server: ") -1 + RSTRING_LEN(val_obj) + 2;
+        continue;
       }
-      if ( strncasecmp(key,"Date",key_len) == 0 ) {
-        date_pushed = 1;
-      }
+
       v[iovcnt].iov_base = key;
       v[iovcnt].iov_len = key_len;
       iovcnt++;
@@ -747,8 +777,6 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       iovcnt++;
 
       /* value */
-      i++;
-      val_obj = rb_ary_entry(harr, i);
       v[iovcnt].iov_base = RSTRING_PTR(val_obj);
       v[iovcnt].iov_len = RSTRING_LEN(val_obj);
       iovcnt++;
@@ -758,13 +786,12 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
     }
 
     if ( date_pushed == 0 ) {
-      v[iovcnt].iov_len = _date_line(date_line);
-      v[iovcnt].iov_base = date_line;
-      iovcnt++;
+      v[1].iov_len = _date_line(date_line);
+      v[1].iov_base = date_line;
     }
 
-    v[iovcnt].iov_base = "\r\n";
-    v[iovcnt].iov_len = sizeof("\r\n") - 1;
+    v[iovcnt].iov_base = "Connection: close\r\n\r\n";
+    v[iovcnt].iov_len = sizeof("Connection: close\r\n\r\n") - 1;
     iovcnt++;
 
     for ( i=0; i<blen; i++) {
