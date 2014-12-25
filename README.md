@@ -1,7 +1,5 @@
 # Rhebok
 
-This project is still in a very early development stage. IT IS NOT READY FOR PRODUCTION!
-
 Rhebok is High Performance Rack Handler/Web Server. 2x performance when compared against Unicorn. 
 
 Rhebok supports following features.
