@@ -245,6 +245,7 @@ module Rack
                     break
                   end
                 end #body.each
+                body.close()
               end
               #p [env,status_code,headers,body]
             ensure
