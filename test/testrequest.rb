@@ -19,6 +19,8 @@ class TestRequest
     minienv = env.dup
     # This may in the future want to replace with a dummy value instead.
     minienv.delete_if { |k,v| NOSERIALIZE.any? { |c| v.kind_of?(c) } }
+    ENV.has_key?("TEST_FOO") and minienv["TEST_FOO"] = ENV["TEST_FOO"]
+    ENV.has_key?("TEST_BAR") and minienv["TEST_BAR"] = ENV["TEST_BAR"]
     body = minienv.to_yaml
     size = body.respond_to?(:bytesize) ? body.bytesize : body.size
     res_header = {"Content-Type" => "text/yaml", "Content-Length" => size.to_s, "X-Foo" => "Foo\nBar", "X-Bar"=>"Foo\n\nBar", "X-Baz"=>"\nBaz", "X-Fuga"=>"Fuga\n"}

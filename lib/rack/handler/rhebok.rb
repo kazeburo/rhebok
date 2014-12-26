@@ -10,6 +10,7 @@ require 'rack/utils'
 require 'io/nonblock'
 require 'prefork_engine'
 require 'rhebok'
+require 'rhebok/config'
 
 $RACK_HANDLER_RHEBOK_GCTOOL = true
 begin
@@ -36,6 +37,8 @@ module Rack
         :MaxGCPerRequest => 5,
         :MinGCPerRequest => nil,
         :BackLog => nil,
+        :BeforeFork => nil,
+        :AfterFork => nil,
       }
       NULLIO  = StringIO.new("").set_encoding('BINARY')
 
@@ -56,7 +59,12 @@ module Rack
         if options[:OobGC].instance_of?(String)
           options[:OobGC] = options[:OobGC].match(/^(true|yes|1)$/i) ? true : false
         end
-        @options = DEFAULT_OPTIONS.merge(options)
+        @options = DEFAULT_OPTIONS.dup
+        if options[:Config] != nil
+          config = ::Rhebok::Config.new(@options)
+          config.instance_eval(::File.read options.delete(:Config))
+        end
+        @options.merge!(options)
         @server = nil
         @_is_tcp = false
         @_using_defer_accept = false
@@ -127,12 +135,20 @@ module Rack
         if @options[:ErrRespawnInterval]
           pm_args["err_respawn_interval"] = @options[:ErrRespawnInterval].to_i
         end
+        if @options[:BeforeFork]
+          pm_args["before_fork"] = proc { |pe2|
+            @options[:BeforeFork].call
+          }
+        end
         Signal.trap('INT','SYSTEM_DEFAULT') # XXX
 
         pe = PreforkEngine.new(pm_args)
         while !pe.signal_received.match(/^(TERM|USR1)$/)
           pe.start do
             srand
+            if @options[:AfterFork]
+              @options[:AfterFork].call
+            end
             self.accept_loop(app)
           end
         end
