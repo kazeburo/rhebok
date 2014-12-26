@@ -32,7 +32,7 @@ Or install it yourself as:
 
 ## Usage
 
-    $ rackup -s Rhebok --port 8080 -O MaxWorkers=10 -O MaxRequestPerChild=1000 -O OobGC=yes -E production config.ru
+    $ rackup -s Rhebok --port 8080 -O MaxWorkers=5 -O MaxRequestPerChild=1000 -O OobGC=yes -E production config.ru
 
 ## Sample configuration with Nginx
 
@@ -55,7 +55,7 @@ nginx.conf
 command line of running Rhebok
 
     $ start_server --path /path/to/app.sock --backlog 16384 -- rackup -s Rhebok \
-      -O MaxWorkers=10 -O MaxRequestPerChild=1000 -E production config.ru
+      -O MaxWorkers=5 -O MaxRequestPerChild=1000 -E production config.ru
 
 ## Options
 
@@ -81,7 +81,7 @@ specifies a listen backlog parameter
 
 ### MaxWorkers
 
-number of worker processes (default: 10)
+number of worker processes (default: 5)
 
 ### MaxRequestPerChild
 

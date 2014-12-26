@@ -27,7 +27,7 @@ module Rack
         :Host => '0.0.0.0',
         :Port => 9292,
         :Path => nil,
-        :MaxWorkers => 10,
+        :MaxWorkers => 5,
         :Timeout => 300,
         :MaxRequestPerChild => 1000,
         :MinRequestPerChild => nil,
