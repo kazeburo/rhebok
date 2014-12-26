@@ -177,7 +177,7 @@ static
 long find_lf(const char* v, ssize_t offset, ssize_t len)
 {
   ssize_t i;
-  for ( i=offset; i != len; ++i) {
+  for ( i=offset; i < len; i++) {
     if (v[i] == 10) {
       return i;
     }
