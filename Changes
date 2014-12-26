@@ -1,3 +1,8 @@
+0.2.0 2014-12-26T11:40:23Z
+
+    - support ConfigFile
+    - changed default MaxWorkers to 5
+
 0.1.2 2014-12-25T17:33:59Z
 
     - oops. status_code.to_i is required
