@@ -13,7 +13,7 @@ describe Rhebok do
     @pid = fork
     if @pid == nil
       #child
-      Rack::Handler::Rhebok.run(@app, :BeforeFork=>proc { ENV["TEST_FOO"]="FOO" }, :Config=>File.expand_path('../test_config.rb', __FILE__))
+      Rack::Handler::Rhebok.run(@app, :BeforeFork=>proc { ENV["TEST_FOO"]="BAZ" }, :ConfigFile=>File.expand_path('../testconfig.rb', __FILE__))
       exit!(true)
     end
     sleep 1

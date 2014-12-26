@@ -32,7 +32,7 @@ Or install it yourself as:
 
 ## Usage
 
-    $ rackup -s Rhebok -O Port=8080 -O MaxWorkers=10 -O MaxRequestPerChild=1000 -O OobGC=yes -E production config.ru
+    $ rackup -s Rhebok --port 8080 -O MaxWorkers=10 -O MaxRequestPerChild=1000 -O OobGC=yes -E production config.ru
 
 ## Sample configuration with Nginx
 
@@ -58,6 +58,10 @@ command line of running Rhebok
       -O MaxWorkers=10 -O MaxRequestPerChild=1000 -E production config.ru
 
 ## Options
+
+### ConfigFile
+
+filename to load options. For details, please read `Config File` section
 
 ### Host
 
@@ -108,7 +112,73 @@ If set, randomizes the number of request before invoking GC between the number o
 
 ### SpawnInterval
 
-if set, worker processes will not be spawned more than once than every given seconds. Also, when SIGHUP is being received, no more than one worker processes will be collected every given seconds. This feature is useful for doing a "slow-restart". See http://blog.kazuhooku.com/2011/04/web-serverstarter-parallelprefork.html for more information. (default: none)
+if set, worker processes will not be spawned more than once than every given seconds. Also, when SIGUSR1 is being received, no more than one worker processes will be collected every given seconds. This feature is useful for doing a "slow-restart". See http://blog.kazuhooku.com/2011/04/web-serverstarter-parallelprefork.html for more information. (default: none)
+
+## Config File
+
+load options from specified config file. If same options are exists in command line and the config file, options written in the config file will take precedence.
+
+```
+$ cat rhebok_config.rb
+host '127.0.0.1'
+port 9292
+max_workers ENV["WEB_CONCURRENCY"] || 3
+before_fork {
+  defined?(ActiveRecord::Base) and
+    ActiveRecord::Base.connection.disconnect!
+}
+after_fork {
+  defined?(ActiveRecord::Base) and
+    ActiveRecord::Base.establish_connection
+}
+$ rackup -s Rhebok -O ConfigFile=rhebok_config.rb -O port 8080 -O OobGC -E production
+Rhebok starts Listening on 127.0.0.1:9292 Pid:11892
+```
+
+Supported options in config file are below.
+
+### host
+
+### port
+
+### path
+
+### backlog
+
+### max_workers
+
+### timeout
+
+### max_request_per_child
+
+### min_request_per_child
+
+### oobgc
+
+### max_gc_per_request
+
+### min_gc_per_request
+
+### spawn_interval
+
+### before_fork
+
+proc object. This block will be called by a master process before forking each worker
+
+### after_fork
+
+proc object. This block will be called by a worker process after forking
+
+## Signal Handling
+
+### Master process
+
+- TERM, HUP: If the master process received TERM or HUP signal, Rhebok will shutdown gracefully
+- USR1: If set SpawnInterval, Rhebok will collect workers every given seconds and exit
+
+### worker process
+
+- TERM: If the worker process received TERM, exit after finishing current request
 
 ## Benchmark
 
@@ -162,7 +232,7 @@ config.ru
 command to run
 
     $ start_server --path /path/to/app.sock  -- rackup -s Rhebok \
-      -O MaxWorkers=8 -O MaxRequestPerChild=1000000 -E production config.ru
+      -O MaxWorkers=8 -O MaxRequestPerChild=0 -E production config.ru
 
 result
 

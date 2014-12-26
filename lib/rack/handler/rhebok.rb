@@ -59,12 +59,13 @@ module Rack
         if options[:OobGC].instance_of?(String)
           options[:OobGC] = options[:OobGC].match(/^(true|yes|1)$/i) ? true : false
         end
-        @options = DEFAULT_OPTIONS.dup
-        if options[:Config] != nil
-          config = ::Rhebok::Config.new(@options)
-          config.instance_eval(::File.read options.delete(:Config))
+        @options = DEFAULT_OPTIONS.merge(options)
+        if @options[:ConfigFile] != nil
+          puts "loading from config_file:#{options[:ConfigFile]}"
+          config = ::Rhebok::Config.new
+          config.instance_eval(::File.read @options.delete(:ConfigFile))
+          @options.merge!(config.retrieve)
         end
-        @options.merge!(options)
         @server = nil
         @_is_tcp = false
         @_using_defer_accept = false
