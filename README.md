@@ -54,7 +54,7 @@ nginx.conf
 
 command line of running Rhebok
 
-    $ start_server --path /path/to/app.sock --backlog 16384 -- rackup -s Rhebok \
+    $ rackup -s Rhebok -O Path=/path/to/app.sock \
       -O MaxWorkers=5 -O MaxRequestPerChild=1000 -E production config.ru
 
 ## Options
@@ -179,6 +179,7 @@ proc object. This block will be called by a worker process after forking
 ### worker process
 
 - TERM: If the worker process received TERM, exit after finishing current request
+
 
 ## Benchmark
 
