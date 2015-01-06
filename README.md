@@ -4,11 +4,11 @@ Rhebok is High Performance Rack Handler/Web Server. 2x performance when compared
 
 Rhebok supports following features.
 
-- ultra fast HTTP processing using picohttpparser
+- ultra fast HTTP processing using [picohttpparser](https://github.com/h2o/picohttpparser)
 - uses accept4(2) if OS support
 - uses writev(2) for output responses
-- prefork and graceful shutdown using prefork_engine
-- hot deploy using start_server
+- prefork and graceful shutdown using [prefork_engine](https://rubygems.org/gems/prefork_engine)
+- hot deploy using [start_server](https://metacpan.org/release/Server-Starter) ([here](https://github.com/lestrrat/go-server-starter) is golang version by lestrrat-san)
 - only supports HTTP/1.0. But does not support Keepalive.
 - supports OobGC
 
