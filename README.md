@@ -18,7 +18,7 @@ This server is suitable for running HTTP application servers behind a reverse pr
 
 Add this line to your application's Gemfile:
 
-```ruby
+```
 gem 'rhebok'
 ```
 
@@ -185,6 +185,12 @@ proc object. This block will be called by a worker process after forking
 
 Rhebok and Unicorn "Hello World" Benchmark (behind nginx reverse proxy)
 
+![image](https://s3-ap-northeast-1.amazonaws.com/softwarearchives/rhebok_unicorn_bench.png)
+
+*"nginx static file" represents req/sec when delivering 13 bytes static files from nginx*
+
+Application code is [here](https://github.com/kazeburo/rhebok_bench_app).
+
 ruby version
 
     $ ruby -v
@@ -215,37 +221,49 @@ nginx.conf
       }
     }
 
-config.ru
-
-    class HelloApp
-      def call(env)
-        [ 
-          200,
-          { 'Content-Type' => 'text/html' },
-          ['hello world ']
-        ]
-      end
-    end
-    run HelloApp.new
-
 ### Rhebok
 
 command to run
 
-    $ start_server --path /path/to/app.sock  -- rackup -s Rhebok \
-      -O MaxWorkers=8 -O MaxRequestPerChild=0 -E production config.ru
+    $ start_server --backlog=16384 --path /dev/shm/app.sock -- \
+      bundle exec --keep-file-descriptors rackup -s Rhebok \
+        -O MaxWorkers=8 -O MaxRequestPerChild=0 -E production config.ru
 
-result
+#### Hello World/Rack Application
 
     $ ./wrk -t 4 -c 500 -d 30  http://localhost/
     Running 30s test @ http://localhost/
       4 threads and 500 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
-        Latency     1.85ms    2.94ms 816.72ms   99.24%
-        Req/Sec    70.14k     9.13k  110.33k    76.74%
-      7885663 requests in 30.00s, 1.29GB read
-    Requests/sec: 262864.06
-    Transfer/sec:     44.11MB
+        Latency     1.74ms  661.27us  38.69ms   91.19%
+        Req/Sec    72.69k     9.42k  114.33k    79.43%
+      8206118 requests in 30.00s, 1.34GB read
+    Requests/sec: 273544.70
+    Transfer/sec:     45.90MB
+
+#### Sinatra
+
+    $ ./wrk -t 4 -c 500 -d 30  http://localhost/
+    Running 30s test @ http://localhost/
+      4 threads and 500 connections
+      Thread Stats   Avg      Stdev     Max   +/- Stdev
+        Latency    16.39ms  418.08us  22.25ms   78.25%
+        Req/Sec     7.73k   230.81     8.38k    70.81%
+      912104 requests in 30.00s, 273.09MB read
+    Requests/sec:  30404.28
+    Transfer/sec:      9.10MB
+
+#### Rails
+
+    $ ./wrk -t 4 -c 500 -d 30  http://localhost/
+    Running 30s test @ http://localhost/
+      4 threads and 500 connections
+      Thread Stats   Avg      Stdev     Max   +/- Stdev
+        Latency   101.13ms    2.57ms 139.04ms   96.88%
+        Req/Sec     1.24k    27.11     1.29k    82.98%
+      148169 requests in 30.00s, 178.18MB read
+    Requests/sec:   4938.93
+    Transfer/sec:      5.94MB
 
 ### Unicorn
 
@@ -258,24 +276,47 @@ unicorn.rb
 
 command to run
 
-    $ unicorn -E production -c unicorn.rb config.ru
-    
-result
+    $ bundle exec unicorn -c unicorn.rb -E production config.ru
+ 
+#### Hello World/Rack Application 
 
     $ ./wrk -t 4 -c 500 -d 30  http://localhost/
     Running 30s test @ http://localhost/
       4 threads and 500 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
-        Latency     3.57ms    0.95ms 206.42ms   94.66%
-        Req/Sec    35.62k     3.79k   56.69k    77.38%
-      4122935 requests in 30.00s, 754.74MB read
-      Socket errors: connect 0, read 0, write 0, timeout 47
-    Requests/sec: 137435.52
-    Transfer/sec:     25.16MB
+        Latency     3.50ms  518.60us  30.28ms   90.35%
+        Req/Sec    37.99k     4.10k   56.56k    72.14%
+      4294095 requests in 30.00s, 786.07MB read
+    Requests/sec: 143140.20
+    Transfer/sec:     26.20MB
+
+#### Sinatra
+
+    $ ./wrk -t 4 -c 500 -d 30  http://localhost/
+    Running 30s test @ http://localhost/
+      4 threads and 500 connections
+      Thread Stats   Avg      Stdev     Max   +/- Stdev
+        Latency    19.31ms    1.09ms  65.92ms   89.94%
+        Req/Sec     6.55k   312.92     7.24k    73.41%
+      775712 requests in 30.00s, 244.09MB read
+    Requests/sec:  25857.85
+    Transfer/sec:      8.14MB
+
+#### Rails
+
+    $ ./wrk -t 4 -c 500 -d 30  http://localhost/
+    Running 30s test @ http://localhost/
+      4 threads and 500 connections
+      Thread Stats   Avg      Stdev     Max   +/- Stdev
+        Latency   105.70ms    4.70ms 151.11ms   93.50%
+        Req/Sec     1.19k    44.16     1.25k    89.13%
+      141846 requests in 30.00s, 172.74MB read
+    Requests/sec:   4728.11
+    Transfer/sec:      5.76MB
 
 ### Server Environment
 
-I used EC2 for benchmarking. Instance type if c3.8xlarge(32cores). A benchmark tool and web servers were executed at same hosts. 
+I used EC2 for benchmarking. Instance type if c3.8xlarge(32cores). A benchmark tool and web servers were executed at same hosts. Before benchmark, increase somaxconn and nfiles. 
 
 ## See Also
 
