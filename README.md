@@ -81,7 +81,7 @@ specifies a listen backlog parameter (default: 5)
 
 ### ReusePort
 
-enable SO_REUSEPORT
+enable SO_REUSEPORT for TCP socket
 
 ### MaxWorkers
 
