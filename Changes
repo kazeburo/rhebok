@@ -1,3 +1,7 @@
+0.2.2 2015-01-07T22:41:52Z
+
+    - support SO_REUSEPORT
+
 0.2.1 2014-12-27T01:26:47Z
 
     - fix segfault. header includes "\n"
