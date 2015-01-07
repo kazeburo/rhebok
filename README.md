@@ -77,7 +77,7 @@ path to listen using unix socket
 
 ### BackLog
 
-specifies a listen backlog parameter
+specifies a listen backlog parameter (default: 5)
 
 ### MaxWorkers
 

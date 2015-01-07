@@ -64,6 +64,10 @@ class Rhebok
       @config[:AfterFork] = block
     end
 
+    def reuseport(&block)
+      @config[:ReusePort] = block
+    end
+
     def retrieve
       @config
     end

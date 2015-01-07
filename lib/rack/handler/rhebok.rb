@@ -36,9 +36,10 @@ module Rack
         :OobGC => false,
         :MaxGCPerRequest => 5,
         :MinGCPerRequest => nil,
-        :BackLog => nil,
+        :BackLog => 5,
         :BeforeFork => nil,
         :AfterFork => nil,
+        :ReusePort => false,
       }
       NULLIO  = StringIO.new("").set_encoding('BINARY')
 
@@ -59,6 +60,10 @@ module Rack
         if options[:OobGC].instance_of?(String)
           options[:OobGC] = options[:OobGC].match(/^(true|yes|1)$/i) ? true : false
         end
+        if options[:ReusePort].instance_of?(String)
+          options[:ReusePort] = options[:ReusePort].match(/^(true|yes|1)$/i) ? true : false
+        end
+
         @options = DEFAULT_OPTIONS.merge(options)
         if @options[:ConfigFile] != nil
           puts "loading from config_file:#{options[:ConfigFile]}"
@@ -80,7 +85,7 @@ module Rack
           else
             @options[:Port] = hostport
           end
-          @server = TCPServer.for_fd(fd.to_i)
+          @server = Socket.for_fd(fd.to_i)
           @_is_tcp = true if !@server.local_address.unix?
         end
 
@@ -97,21 +102,27 @@ module Rack
             end
             puts "Rhebok starts Listening on :unix:#{@options[:Path]} Pid:#{$$}"
             oldmask = ::File.umask(0)
-            @server = UNIXServer.open(@options[:Path])
+            @server = Socket.new(Socket::AF_UNIX, Socket::SOCK_STREAM, 0)
+            @server.bind(Addrinfo.unix(@options[:Path]))
             ::File.umask(oldmask)
             @_is_tcp = false
             @options[:Host] = "0.0.0.0"
             @options[:Port] = 0
           else
             puts "Rhebok starts Listening on #{@options[:Host]}:#{@options[:Port]} Pid:#{$$}"
-            @server = TCPServer.open(@options[:Host], @options[:Port])
-            @server.setsockopt(:SOCKET, :REUSEADDR, 1)
+            addrinfo = Addrinfo.tcp(@options[:Host], @options[:Port])
+            @server = Socket.new(defined?(Socket::AF_INET6) && addrinfo.afamily == Socket::AF_INET6 ?
+                                 Socket::AF_INET6 : Socket::AF_INET, Socket::SOCK_STREAM, 0)
+            @server.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1)
+            if @options[:ReusePort]
+              # XXX SO_REUSEPORT = 15
+              @server.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEPORT, 1);
+            end
+            @server.bind(addrinfo)
             @_is_tcp = true
           end
-          if @options[:BackLog] != nil
-            @server.listen(@options[:BackLog].to_i)
-          end
-        end
+          @server.listen(@options[:BackLog].to_i)
+        end # @server == nil
 
         if RUBY_PLATFORM.match(/linux/) && @_is_tcp == true
           begin
@@ -119,6 +130,11 @@ module Rack
             @_using_defer_accept = true
           end
         end
+
+        if @server.respond_to?("autoclose=")
+          @server.autoclose = false
+        end
+
       end
 
       def run_worker(app)
