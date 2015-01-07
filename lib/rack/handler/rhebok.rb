@@ -115,7 +115,6 @@ module Rack
                                  Socket::AF_INET6 : Socket::AF_INET, Socket::SOCK_STREAM, 0)
             @server.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1)
             if @options[:ReusePort]
-              # XXX SO_REUSEPORT = 15
               @server.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEPORT, 1);
             end
             @server.bind(addrinfo)

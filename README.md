@@ -79,6 +79,10 @@ path to listen using unix socket
 
 specifies a listen backlog parameter (default: 5)
 
+### ReusePort
+
+enable SO_REUSEPORT
+
 ### MaxWorkers
 
 number of worker processes (default: 5)
@@ -144,6 +148,8 @@ Supported options in config file are below.
 ### path
 
 ### backlog
+
+### reuseport
 
 ### max_workers
 
