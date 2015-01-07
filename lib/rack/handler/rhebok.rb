@@ -77,7 +77,7 @@ module Rack
       end
 
       def setup_listener()
-        if ENV["SERVER_STARTER_PORT"]
+        if ENV.has_key?("SERVER_STARTER_PORT") && ENV["SERVER_STARTER_PORT"].to_s.match(/=/)
           hostport, fd = ENV["SERVER_STARTER_PORT"].split("=",2)
           if m = hostport.match(/(.*):(\d+)/)
             @options[:Host] = m[0]
