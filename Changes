@@ -1,3 +1,7 @@
+0.2.3 2015-01-08T11:21:01Z
+
+    - check ENV["SERVER_STARTER_PORT"] has "="
+
 0.2.2 2015-01-07T22:41:52Z
 
     - support SO_REUSEPORT
