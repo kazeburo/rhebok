@@ -18,6 +18,7 @@
 #define MAX_HEADER_NAME_LEN 1024
 #define MAX_HEADERS         128
 #define BAD_REQUEST "HTTP/1.0 400 Bad Request\r\nConnection: close\r\n\r\n400 Bad Request\r\n"
+#define READ_BUF 16384
 #define TOU(ch) (('a' <= ch && ch <= 'z') ? ch - ('a' - 'A') : ch)
 
 static const char *DoW[] = {
@@ -582,6 +583,8 @@ VALUE rhe_read_timeout(VALUE self, VALUE filenov, VALUE rbuf, VALUE lenv, VALUE 
   timeout = NUM2DBL(timeoutv);
   offset = NUM2LONG(offsetv);
   len = NUM2LONG(lenv);
+  if ( len > READ_BUF )
+    len = READ_BUF;
   d = ALLOC_N(char, len);
   rv = _read_timeout(fileno, timeout, &d[offset], len);
   if ( rv > 0 ) {
@@ -713,7 +716,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
     status_line[i++] = '/';
     status_line[i++] = '1';
     status_line[i++] = '.';
-    status_line[i++] = '0';
+    status_line[i++] = '1';
     status_line[i++] = ' ';
     str_i(status_line,&i,status_code,3);
     status_line[i++] = ' ';
