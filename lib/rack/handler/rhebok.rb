@@ -300,22 +300,15 @@ module Rack
               end
 
               status_code, headers, body = app.call(env)
-              use_chunked =  headers.key?("Transfer-Encoding") || headers.key?("Content-Length") ? false : true
-              use_chunked = false if env["SERVER_PROTOCOL"] != "HTTP/1.1"
-              if use_chunked
-                headers["Transfer-Encoding"] = "chunked"
-              end
+
+              use_chunked =  env["SERVER_PROTOCOL"] != "HTTP/1.1" ||
+                             headers.key?("Transfer-Encoding") ||
+                             headers.key?("Content-Length") ? false : true
+              
               if body.instance_of?(Array)
-                if use_chunked
-                  ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers,
-                                          body.map { |part|
-                                            part.bytesize.to_s(16) + "\015\012" + part + "\015\012"
-                                          })
-                else
-                  ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, body)
-                end
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, body, use_chunked ? 1 : 0)
               else
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, [])
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, [], use_chunked ? 1 : 0)
                 body.each do |part|
                   ret = nil
                   if use_chunked
@@ -327,9 +320,7 @@ module Rack
                     break
                   end
                 end #body.each
-                if use_chunked
-                  ::Rhebok.write_all(connection, "0\015\012\015\012", 0, @options[:Timeout])
-                end
+                ::Rhebok.write_all(connection, "0\015\012\015\012", 0, @options[:Timeout]) if use_chunked
                 body.respond_to?(:close) and body.close
               end
               #p [env,status_code,headers,body]
