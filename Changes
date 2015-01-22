@@ -1,3 +1,7 @@
+0.8.2 2015-01-22T19:42:49Z
+
+    - tune around Expect
+
 0.8.1 2015-01-22T16:42:28Z
 
     - stringfy body and header values
