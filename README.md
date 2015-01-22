@@ -77,7 +77,7 @@ path to listen using unix socket
 
 ### BackLog
 
-specifies a listen backlog parameter (default: 5)
+specifies a listen backlog parameter (default: Socket::SOMAXCONN. usually 128 on Linux )
 
 ### ReusePort
 

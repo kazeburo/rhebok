@@ -37,7 +37,7 @@ module Rack
         :OobGC => false,
         :MaxGCPerRequest => 5,
         :MinGCPerRequest => nil,
-        :BackLog => 5,
+        :BackLog => Socket::SOMAXCONN,
         :BeforeFork => nil,
         :AfterFork => nil,
         :ReusePort => false,
