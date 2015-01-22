@@ -659,6 +659,7 @@ int header_to_array(VALUE key_obj, VALUE val_obj, VALUE ary) {
   long val_lf;
   char * val;
 
+  val_obj = rb_String(val_obj);
   val = RSTRING_PTR(val_obj);
   val_len = RSTRING_LEN(val_obj);
   val_offset = 0;
@@ -831,7 +832,10 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
 
     ssize_t chb_offset = 0;
     for ( i=0; i<blen; i++) {
-      val_obj = rb_ary_entry(body, i);
+      val_obj = rb_String(rb_ary_entry(body, i));
+      if ( RSTRING_LEN(val_obj) == 0 ) {
+          continue;
+      }
       if ( use_chunked ) {
           v[iovcnt].iov_len = _chunked_header(&chunked_header_buf[chb_offset],RSTRING_LEN(val_obj));
           v[iovcnt].iov_base = &chunked_header_buf[chb_offset];
