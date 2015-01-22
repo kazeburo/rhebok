@@ -23,7 +23,10 @@ class TestRequest
     ENV.has_key?("TEST_BAR") and minienv["TEST_BAR"] = ENV["TEST_BAR"]
     body = minienv.to_yaml
     size = body.respond_to?(:bytesize) ? body.bytesize : body.size
-    res_header = {"Content-Type" => "text/yaml", "Content-Length" => size.to_s, "X-Foo" => "Foo\nBar", "X-Bar"=>"Foo\n\nBar", "X-Baz"=>"\nBaz", "X-Fuga"=>"Fuga\n"}
+    res_header = {"Content-Length" => size.to_s, "Content-Type" => "text/yaml",  "X-Foo" => "Foo\nBar", "X-Bar"=>"Foo\n\nBar", "X-Baz"=>"\nBaz", "X-Fuga"=>"Fuga\n"}
+    if env["PATH_INFO"] =~ /remove_length/
+      res_header.delete("Content-Length")
+    end
     [status, res_header.merge(test_header), [body]]
   end
 
@@ -73,6 +76,35 @@ class TestRequest
           @response = YAML.load(response.body)
         }
       }
+    end
+
+    def curl_command(command)
+      body = ""
+      header = {}
+      request = {}
+      open("|" + command) { |f|
+        while (line = f.gets)
+          next if line.match(/^(\*|}|{) /)
+          if line.match(/^> /)
+            line.sub!(/^> /,"")
+            line.gsub!(/[\r\n]/,"")
+            key,val = line.split(/: /,2)
+            request[key.to_s] = val.to_s
+            next
+          end
+          if line.match(/^< /)
+            line.sub!(/^< /,"")
+            line.gsub!(/[\r\n]/,"")
+            key,val = line.split(/: /,2)
+            header[key.to_s] = val.to_s
+            next
+          end
+          body += line
+        end
+      }
+      @request = request
+      @response = YAML.load(body)
+      @header = header
     end
   end
 end
