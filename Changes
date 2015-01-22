@@ -1,3 +1,7 @@
+0.8.0 2015-01-22T10:18:30Z
+
+    - support HTTP/1.1
+
 0.2.3 2015-01-08T11:21:01Z
 
     - check ENV["SERVER_STARTER_PORT"] has "="
