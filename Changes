@@ -1,3 +1,8 @@
+0.8.1 2015-01-22T16:42:28Z
+
+    - stringfy body and header values
+    - check 0 byte body
+
 0.8.0 2015-01-22T10:18:30Z
 
     - support HTTP/1.1
