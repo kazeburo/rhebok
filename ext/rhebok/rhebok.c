@@ -18,6 +18,7 @@
 #define MAX_HEADER_NAME_LEN 1024
 #define MAX_HEADERS         128
 #define BAD_REQUEST "HTTP/1.0 400 Bad Request\r\nConnection: close\r\n\r\n400 Bad Request\r\n"
+#define READ_BUF 16384
 #define TOU(ch) (('a' <= ch && ch <= 'z') ? ch - ('a' - 'A') : ch)
 
 static const char *DoW[] = {
@@ -26,6 +27,8 @@ static const char *DoW[] = {
 static const char *MoY[] = {
   "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"
 };
+static const char xdigit[16] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
+
 
 /* stolen from HTTP::Status and Feersum */
 /* Unmarked codes are from RFC 2616 */
@@ -378,6 +381,24 @@ void str_i(char * dst, int * dst_len, int src, int fig) {
 }
 
 static
+int _chunked_header(char *buf, ssize_t len) {
+    int dlen = 0, i;
+    ssize_t l = len;
+    while ( l > 0 ) {
+        dlen++;
+        l /= 16;
+    }
+    i = dlen;
+    buf[i++] = 13;
+    buf[i++] = 10;
+    while ( len > 0 ) {
+        buf[--dlen] = xdigit[len % 16];
+        len /= 16;
+    }
+    return i;
+}
+
+static
 int _date_line(char * date_line) {
   struct tm gtm;
   time_t lt;
@@ -436,7 +457,7 @@ int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
   rb_hash_aset(env, request_method_key, rb_str_new(method,method_len));
   rb_hash_aset(env, request_uri_key, rb_str_new(path, path_len));
   rb_hash_aset(env, script_name_key, vacant_string_val);
-  rb_hash_aset(env, server_protocol_key, (minor_version > 1 || minor_version < 0 ) ? http10_val : http11_val);
+  rb_hash_aset(env, server_protocol_key, (minor_version == 1) ? http11_val : http10_val);
 
   /* PATH_INFO QUERY_STRING */
   path_len = find_ch(path, path_len, '#'); /* strip off all text after # after storing request_uri */
@@ -582,6 +603,8 @@ VALUE rhe_read_timeout(VALUE self, VALUE filenov, VALUE rbuf, VALUE lenv, VALUE 
   timeout = NUM2DBL(timeoutv);
   offset = NUM2LONG(offsetv);
   len = NUM2LONG(lenv);
+  if ( len > READ_BUF )
+    len = READ_BUF;
   d = ALLOC_N(char, len);
   rv = _read_timeout(fileno, timeout, &d[offset], len);
   if ( rv > 0 ) {
@@ -665,7 +688,7 @@ VALUE rhe_close(VALUE self, VALUE fileno) {
 }
 
 static
-VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status_codev, VALUE headers, VALUE body) {
+VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status_codev, VALUE headers, VALUE body, VALUE use_chunkedv) {
   ssize_t hlen = 0;
   ssize_t blen = 0;
 
@@ -687,12 +710,15 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   const char * message;
 
   const char * s;
-  char* d;
+  char * d;
   ssize_t n;
 
+  char * chunked_header_buf;
+  
   int fileno = NUM2INT(filenov);
   double timeout = NUM2DBL(timeoutv);
   int status_code = NUM2INT(status_codev);
+  int use_chunked = NUM2INT(use_chunkedv);
 
   harr = rb_ary_new();
   RB_GC_GUARD(harr);
@@ -700,6 +726,9 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   hlen = RARRAY_LEN(harr);
   blen = RARRAY_LEN(body);
   iovcnt = 10 + (hlen * 2) + blen;
+  if ( use_chunked )
+      iovcnt += blen*2;
+  chunked_header_buf = ALLOC_N(char, 32 * blen);
 
   {
     struct iovec v[iovcnt]; // Needs C99 compiler
@@ -713,7 +742,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
     status_line[i++] = '/';
     status_line[i++] = '1';
     status_line[i++] = '.';
-    status_line[i++] = '0';
+    status_line[i++] = '1';
     status_line[i++] = ' ';
     str_i(status_line,&i,status_code,3);
     status_line[i++] = ' ';
@@ -790,14 +819,37 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       v[1].iov_base = date_line;
     }
 
+    if ( use_chunked ) {
+      v[iovcnt].iov_base = "Transfer-Encoding: chunked\r\n";
+      v[iovcnt].iov_len = sizeof("Transfer-Encoding: chunked\r\n") - 1;
+      iovcnt++;
+    }
+
     v[iovcnt].iov_base = "Connection: close\r\n\r\n";
     v[iovcnt].iov_len = sizeof("Connection: close\r\n\r\n") - 1;
     iovcnt++;
 
+    ssize_t chb_offset = 0;
     for ( i=0; i<blen; i++) {
       val_obj = rb_ary_entry(body, i);
+      if ( use_chunked ) {
+          v[iovcnt].iov_len = _chunked_header(&chunked_header_buf[chb_offset],RSTRING_LEN(val_obj));
+          v[iovcnt].iov_base = &chunked_header_buf[chb_offset];
+          chb_offset += v[iovcnt].iov_len;
+          iovcnt++;
+      }
       v[iovcnt].iov_base = RSTRING_PTR(val_obj);
       v[iovcnt].iov_len = RSTRING_LEN(val_obj);
+      iovcnt++;
+      if ( use_chunked ) {
+          v[iovcnt].iov_base = "\r\n";
+          v[iovcnt].iov_len = sizeof("\r\n") -1;
+          iovcnt++;
+      }
+    }
+    if ( use_chunked ) {
+      v[iovcnt].iov_base = "0\r\n\r\n";
+      v[iovcnt].iov_len = sizeof("0\r\n\r\n") - 1;
       iovcnt++;
     }
 
@@ -824,7 +876,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       }
     }
   }
-
+  xfree(chunked_header_buf);
   if ( rv < 0 ) {
     return Qnil;
   }
@@ -880,5 +932,5 @@ void Init_rhebok()
   rb_define_module_function(cRhebok, "write_timeout", rhe_write_timeout, 5);
   rb_define_module_function(cRhebok, "write_all", rhe_write_all, 4);
   rb_define_module_function(cRhebok, "close_rack", rhe_close, 1);
-  rb_define_module_function(cRhebok, "write_response", rhe_write_response, 5);
+  rb_define_module_function(cRhebok, "write_response", rhe_write_response, 6);
 }

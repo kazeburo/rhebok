@@ -11,6 +11,7 @@ require 'io/nonblock'
 require 'prefork_engine'
 require 'rhebok'
 require 'rhebok/config'
+require 'rhebok/buffered'
 
 $RACK_HANDLER_RHEBOK_GCTOOL = true
 begin
@@ -238,16 +239,15 @@ module Rack
             begin
               proc_req_count += 1
               @can_exit = false
+              # expect
+              if env.key?("HTTP_EXPECT") && env.delete("HTTP_EXPECT") == "100-continue"
+                ::Rhebok.write_all(connection, "HTTP/1.1 100 Continue\015\012\015\012", 0, @options[:Timeout])
+              end
               # handle request
+              is_chunked = env.key?("HTTP_TRANSFER_ENCODING") && env.delete("HTTP_TRANSFER_ENCODING") == 'chunked'
               if env.key?("CONTENT_LENGTH") && env["CONTENT_LENGTH"].to_i > 0
                 cl = env["CONTENT_LENGTH"].to_i
-                if cl > MAX_MEMORY_BUFFER_SIZE
-                  buffer = Tempfile.open('r')
-                  buffer.binmode
-                  buffer.set_encoding('BINARY')
-                else
-                  buffer = StringIO.new("").set_encoding('BINARY')
-                end
+                buffer = ::Rhebok::Buffered.new(cl,MAX_MEMORY_BUFFER_SIZE)
                 while cl > 0
                   chunk = ""
                   if buf.bytesize > 0
@@ -259,30 +259,74 @@ module Rack
                       return
                     end
                   end
-                  buffer << chunk
+                  buffer.print(chunk)
                   cl -= chunk.bytesize
                 end
-                buffer.rewind
-                env["rack.input"] = buffer
+                env["rack.input"] = buffer.rewind
+              elsif is_chunked
+                buffer = ::Rhebok::Buffered.new(0,MAX_MEMORY_BUFFER_SIZE)
+                chunked_buffer = '';
+                complete = false
+                while !complete
+                  chunk = ""
+                  if buf.bytesize > 0
+                    chunk = buf
+                    buf = ""
+                  else
+                    readed = ::Rhebok.read_timeout(connection, chunk, 16384, 0, @options[:Timeout])
+                    if readed == nil
+                      return
+                    end
+                  end
+                  chunked_buffer << chunk
+                  while chunked_buffer.sub!(/^(([0-9a-fA-F]+).*\015\012)/,"") != nil
+                    trailer = $1
+                    chunked_len = $2.hex
+                    if chunked_len == 0
+                      complete = true
+                      break
+                    elsif chunked_buffer.bytesize < chunked_len + 2
+                      chunked_buffer = trailer + chunked_buffer
+                      break
+                    end
+                    buffer.print(chunked_buffer.byteslice(0,chunked_len))
+                    chunked_buffer = chunked_buffer.byteslice(chunked_len,chunked_buffer.bytesize-chunked_len)
+                    chunked_buffer.sub!(/^\015\012/,"")
+                  end
+                  break if complete
+                end
+                env["CONTENT_LENGTH"] = buffer.size.to_s
+                env["rack.input"] = buffer.rewind
               end
 
               status_code, headers, body = app.call(env)
+
+              use_chunked =  env["SERVER_PROTOCOL"] != "HTTP/1.1" ||
+                             headers.key?("Transfer-Encoding") ||
+                             headers.key?("Content-Length") ? false : true
+              
               if body.instance_of?(Array)
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, body)
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, body, use_chunked ? 1 : 0)
               else
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, [])
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, [], use_chunked ? 1 : 0)
                 body.each do |part|
-                  ret = ::Rhebok.write_all(connection, part, 0, @options[:Timeout])
+                  ret = nil
+                  if use_chunked
+                    ret = ::Rhebok.write_all(connection, part.bytesize.to_s(16) + "\015\012" + part + "\015\012", 0, @options[:Timeout])
+                  else
+                    ret = ::Rhebok.write_all(connection, part, 0, @options[:Timeout])
+                  end
                   if ret == nil
                     break
                   end
                 end #body.each
+                ::Rhebok.write_all(connection, "0\015\012\015\012", 0, @options[:Timeout]) if use_chunked
                 body.respond_to?(:close) and body.close
               end
               #p [env,status_code,headers,body]
             ensure
-              if buffer.instance_of?(Tempfile)
-                buffer.close!
+              if buffer != nil
+                buffer.close
               end
               ::Rhebok.close_rack(connection)
               # out of band gc
