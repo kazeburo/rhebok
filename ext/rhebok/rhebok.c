@@ -18,6 +18,8 @@
 #define MAX_HEADER_NAME_LEN 1024
 #define MAX_HEADERS         128
 #define BAD_REQUEST "HTTP/1.0 400 Bad Request\r\nConnection: close\r\n\r\n400 Bad Request\r\n"
+#define EXPECT_CONTINUE "HTTP/1.1 100 Continue\r\n\r\n"
+#define EXPECT_FAILED "HTTP/1.1 417 Expectation Failed\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nExpectation Failed\r\n"
 #define READ_BUF 16384
 #define TOU(ch) (('a' <= ch && ch <= 'z') ? ch - ('a' - 'A') : ch)
 
@@ -130,6 +132,8 @@ static VALUE zero_string_val;
 
 static VALUE http10_val;
 static VALUE http11_val;
+
+static VALUE expect_key;
 
 struct common_header {
   const char * name;
@@ -583,6 +587,21 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
     buf_len += rv;
   }
 
+  VALUE expect_val = rb_hash_aref(env, expect_key);
+  if ( expect_val != Qnil ) {
+      if ( strncmp(RSTRING_PTR(expect_val), "100-continue", RSTRING_LEN(expect_val)) == 0 ) {
+          rv = _write_timeout(fd, timeout, EXPECT_CONTINUE, sizeof(EXPECT_CONTINUE) - 1);
+          if ( rv <= 0 ) {
+              close(fd);
+              goto badexit;
+          }
+      } else {
+          rv = _write_timeout(fd, timeout, EXPECT_FAILED, sizeof(EXPECT_FAILED) - 1);
+          close(fd);
+          goto badexit;
+      }
+  }
+
   req = rb_ary_new2(2);
   rb_ary_push(req, rb_int_new(fd));
   rb_ary_push(req, rb_str_new(&read_buf[reqlen],buf_len - reqlen));
@@ -916,6 +935,9 @@ void Init_rhebok()
   http11_val = rb_obj_freeze(rb_str_new2("HTTP/1.1"));
   rb_gc_register_address(&http11_val);
 
+  expect_key = rb_obj_freeze(rb_str_new2("HTTP_EXPECT"));
+  rb_gc_register_address(&expect_key);
+  
   set_common_header("ACCEPT",sizeof("ACCEPT") - 1, 0);
   set_common_header("ACCEPT-ENCODING",sizeof("ACCEPT-ENCODING") - 1, 0);
   set_common_header("ACCEPT-LANGUAGE",sizeof("ACCEPT-LANGUAGE") - 1, 0);

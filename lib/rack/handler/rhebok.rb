@@ -239,12 +239,7 @@ module Rack
             begin
               proc_req_count += 1
               @can_exit = false
-              # expect
-              if env.key?("HTTP_EXPECT") && env.delete("HTTP_EXPECT") == "100-continue"
-                ::Rhebok.write_all(connection, "HTTP/1.1 100 Continue\015\012\015\012", 0, @options[:Timeout])
-              end
               # handle request
-              is_chunked = env.key?("HTTP_TRANSFER_ENCODING") && env.delete("HTTP_TRANSFER_ENCODING") == 'chunked'
               if env.key?("CONTENT_LENGTH") && env["CONTENT_LENGTH"].to_i > 0
                 cl = env["CONTENT_LENGTH"].to_i
                 buffer = ::Rhebok::Buffered.new(cl,MAX_MEMORY_BUFFER_SIZE)
@@ -263,7 +258,7 @@ module Rack
                   cl -= chunk.bytesize
                 end
                 env["rack.input"] = buffer.rewind
-              elsif is_chunked
+              elsif env.key?("HTTP_TRANSFER_ENCODING") && env.delete("HTTP_TRANSFER_ENCODING") == 'chunked'
                 buffer = ::Rhebok::Buffered.new(0,MAX_MEMORY_BUFFER_SIZE)
                 chunked_buffer = '';
                 complete = false
@@ -303,15 +298,15 @@ module Rack
 
               use_chunked =  env["SERVER_PROTOCOL"] != "HTTP/1.1" ||
                              headers.key?("Transfer-Encoding") ||
-                             headers.key?("Content-Length") ? false : true
-              
+                             headers.key?("Content-Length") ? 0 : 1
+
               if body.instance_of?(Array)
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, body, use_chunked ? 1 : 0)
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, body, use_chunked)
               else
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, [], use_chunked ? 1 : 0)
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, [], use_chunked)
                 body.each do |part|
                   ret = nil
-                  if use_chunked
+                  if use_chunked == 1
                     ret = ::Rhebok.write_all(connection, part.bytesize.to_s(16) + "\015\012" + part + "\015\012", 0, @options[:Timeout])
                   else
                     ret = ::Rhebok.write_all(connection, part, 0, @options[:Timeout])
@@ -320,7 +315,7 @@ module Rack
                     break
                   end
                 end #body.each
-                ::Rhebok.write_all(connection, "0\015\012\015\012", 0, @options[:Timeout]) if use_chunked
+                ::Rhebok.write_all(connection, "0\015\012\015\012", 0, @options[:Timeout]) if use_chunked == 1
                 body.respond_to?(:close) and body.close
               end
               #p [env,status_code,headers,body]
