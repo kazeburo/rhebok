@@ -22,7 +22,7 @@ describe Rhebok do
       exit!(true)
     end
 
-    command = 'curl -sv -X POST -T "'+File.expand_path('../testrequest.rb', __FILE__)+'" -H "Content-type: text/plain" --header "Transfer-Encoding: chunked" http://127.0.0.1:9202/remove_length 2>&1'
+    command = 'curl  --stderr - -sv -X POST -T "'+File.expand_path('../testrequest.rb', __FILE__)+'" -H "Content-type: text/plain" --header "Transfer-Encoding: chunked" http://127.0.0.1:9202/remove_length'
     curl_command(command)
     should "with curl" do
       @request["Transfer-Encoding"].should.equal "chunked"
