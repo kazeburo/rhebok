@@ -103,6 +103,7 @@ class TestRequest
         end
       }
       @request = request
+      p body
       @response = YAML.load(body)
       @header = header
     end
