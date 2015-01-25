@@ -708,7 +708,7 @@ VALUE rhe_close(VALUE self, VALUE fileno) {
 }
 
 static
-VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status_codev, VALUE headers, VALUE body, VALUE use_chunkedv) {
+VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status_codev, VALUE headers, VALUE body, VALUE use_chunkedv, VALUE header_onlyv) {
   ssize_t hlen = 0;
   ssize_t blen = 0;
 
@@ -739,7 +739,13 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   double timeout = NUM2DBL(timeoutv);
   int status_code = NUM2INT(status_codev);
   int use_chunked = NUM2INT(use_chunkedv);
-
+  int header_only = NUM2INT(header_onlyv);
+  
+  /* status_with_no_entity_body */
+  if ( status_code < 200 || status_code == 204 || status_code == 304 ) {
+    use_chunked = 0;
+  }
+  
   harr = rb_ary_new();
   RB_GC_GUARD(harr);
   rb_hash_foreach(headers, header_to_array, harr);
@@ -870,7 +876,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
           iovcnt++;
       }
     }
-    if ( use_chunked ) {
+    if ( use_chunked && header_only == 0 ) {
       v[iovcnt].iov_base = "0\r\n\r\n";
       v[iovcnt].iov_len = sizeof("0\r\n\r\n") - 1;
       iovcnt++;
@@ -958,5 +964,5 @@ void Init_rhebok()
   rb_define_module_function(cRhebok, "write_timeout", rhe_write_timeout, 5);
   rb_define_module_function(cRhebok, "write_all", rhe_write_all, 4);
   rb_define_module_function(cRhebok, "close_rack", rhe_close, 1);
-  rb_define_module_function(cRhebok, "write_response", rhe_write_response, 6);
+  rb_define_module_function(cRhebok, "write_response", rhe_write_response, 7);
 }

@@ -301,9 +301,9 @@ module Rack
                              headers.key?("Content-Length") ? 0 : 1
 
               if body.instance_of?(Array)
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, body, use_chunked)
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, body, use_chunked, 0)
               else
-                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, [], use_chunked)
+                ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, [], use_chunked, 1)
                 body.each do |part|
                   ret = nil
                   if use_chunked == 1
