@@ -1,3 +1,7 @@
+0.8.5 2015-01-26T02:23:08Z
+
+    - fix bug. send 0byte mark when using a non raw Array body
+
 0.8.3 2015-01-23T00:33:02Z
 
     - change default backlog to SOMAXCONN
