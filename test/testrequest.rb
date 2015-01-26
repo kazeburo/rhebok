@@ -78,7 +78,26 @@ class TestRequest
       }
     end
 
-    def curl_command(command)
+    def test_rhebok(app,cb)
+      begin
+        @pid = fork
+        if @pid == nil
+          # child
+          Rack::Handler::Rhebok.run(app, :Host=>@host, :Port=>@port, :MaxWorkers=>1)
+          exit!(true)
+        end
+        cb.call
+      ensure
+        sleep 1
+        if @pid != nil
+          Process.kill(:TERM, @pid)
+          Process.wait()
+        end
+      end
+    end
+
+    
+    def curl_request(command)
       body = ""
       header = {}
       request = {}
@@ -104,9 +123,15 @@ class TestRequest
         end
       }
       @request = request
-      @response = YAML.load(body)
+      @body = body
       @header = header
     end
+
+    def curl_yaml(command)
+      curl_request(command)
+      @response = YAML.load(@body)
+    end
+    
   end
 end
 

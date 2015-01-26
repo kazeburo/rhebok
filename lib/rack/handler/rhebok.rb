@@ -307,8 +307,7 @@ module Rack
                 body.each do |part|
                   ret = nil
                   if use_chunked == 1
-                    next if part.bytesize == 0;
-                    ret = ::Rhebok.write_all(connection, part.bytesize.to_s(16) + "\015\012" + part + "\015\012", 0, @options[:Timeout])
+                    ret = ::Rhebok.write_chunk(connection, part, 0, @options[:Timeout])
                   else
                     ret = ::Rhebok.write_all(connection, part, 0, @options[:Timeout])
                   end
