@@ -1,3 +1,8 @@
+0.9.0 2015-11-13T23:44:13
+
+    - safe graceful shutdown
+    - fix iovcnt calculation
+
 0.8.6 2015-01-26T14:53:06Z
 
     - add some chunked transfer test. refactor around sending chunk
