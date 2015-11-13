@@ -24,7 +24,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "bacon"
   spec.add_dependency "rack"
-  spec.add_dependency "prefork_engine", ">= 0.0.4"
+  spec.add_dependency "prefork_engine", ">= 0.0.6"
 
   # get an array of submodule dirs by executing 'pwd' inside each submodule
   `git submodule --quiet foreach pwd`.split($\).each do |submodule_path|

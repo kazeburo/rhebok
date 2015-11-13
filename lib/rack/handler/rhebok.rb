@@ -169,7 +169,10 @@ module Rack
             self.accept_loop(app)
           end
         end
-        pe.wait_all_children
+
+        while pe.wait_all_children(1) > 0
+          pe.signal_all_children('TERM')
+        end
       end
 
       def _calc_reqs_per_child
@@ -200,17 +203,10 @@ module Rack
 
 
       def accept_loop(app)
-        @can_exit = true
         @term_received = 0
         proc_req_count = 0
         Signal.trap(:TERM) do
           @term_received += 1
-          if @can_exit
-            exit!(true)
-          end
-          if @can_exit || @term_received > 1
-            exit!(true)
-          end
         end
         Signal.trap(:PIPE, "IGNORE")
         max_reqs = self._calc_reqs_per_child()
@@ -230,7 +226,9 @@ module Rack
         }
 
         while @options[:MaxRequestPerChild].to_i == 0 || proc_req_count < max_reqs
-          @can_exit = true
+          if @term_received > 0
+            exit!(true)
+          end
           env = env_template.clone
           connection, buf = ::Rhebok.accept_rack(fileno, @options[:Timeout], @_is_tcp, env)
           if connection
@@ -238,7 +236,6 @@ module Rack
             buffer = nil
             begin
               proc_req_count += 1
-              @can_exit = false
               # handle request
               if env.key?("CONTENT_LENGTH") && env["CONTENT_LENGTH"].to_i > 0
                 cl = env["CONTENT_LENGTH"].to_i
@@ -336,9 +333,6 @@ module Rack
               end
             end #begin
           end # accept
-          if @term_received > 0
-            exit!(true)
-          end
         end #while max_reqs
       end #def
 
