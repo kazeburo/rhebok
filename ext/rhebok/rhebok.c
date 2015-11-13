@@ -2,6 +2,9 @@
 #include <time.h>
 #include <ctype.h>
 #include <poll.h>
+#ifndef __need_IOV_MAX
+#define __need_IOV_MAX
+#endif
 #include <sys/uio.h>
 #include <errno.h>
 #include <limits.h>
@@ -13,6 +16,16 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include "picohttpparser/picohttpparser.c"
+
+#ifndef IOV_MAX
+#if defined(__FreeBSD__) || defined(__APPLE__)
+# define IOV_MAX 128
+#endif
+#endif
+
+#ifndef IOV_MAX
+#  error "Unable to determine IOV_MAX from system headers"
+#endif
 
 #define MAX_HEADER_SIZE 16384
 #define MAX_HEADER_NAME_LEN 1024
@@ -679,6 +692,7 @@ VALUE rhe_write_chunk(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE 
   ssize_t written = 0;
   ssize_t vec_offset = 0;
   int count =0;
+  int remain;
   ssize_t iovcnt = 3;
   char chunked_header_buf[18];
 
@@ -700,7 +714,8 @@ VALUE rhe_write_chunk(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE 
 
     vec_offset = 0;
     written = 0;
-    while ( iovcnt - vec_offset > 0 ) {
+    remain = iovcnt;
+    while ( remain > 0 ) {
       count = (iovcnt > IOV_MAX) ? IOV_MAX : iovcnt;
       rv = _writev_timeout(NUM2INT(fileno), NUM2DBL(timeout),  &v[vec_offset], count - vec_offset, (vec_offset == 0) ? 0 : 1);
       if ( rv <= 0 ) {
@@ -710,8 +725,9 @@ VALUE rhe_write_chunk(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE 
       written += rv;
       while ( rv > 0 ) {
         if ( (unsigned int)rv >= v[vec_offset].iov_len ) {
-        rv -= v[vec_offset].iov_len;
+          rv -= v[vec_offset].iov_len;
           vec_offset++;
+          remain--;
         }
         else {
           v[vec_offset].iov_base = (char*)v[vec_offset].iov_base + rv;
@@ -774,6 +790,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   ssize_t written;
   int count;
   int i;
+  int remain;
   char status_line[512];
   char date_line[512];
   char server_line[1032];
@@ -940,7 +957,8 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
 
     vec_offset = 0;
     written = 0;
-    while ( iovcnt - vec_offset > 0 ) {
+    remain = iovcnt;
+    while ( remain > 0 ) {
       count = (iovcnt > IOV_MAX) ? IOV_MAX : iovcnt;
       rv = _writev_timeout(fileno, timeout,  &v[vec_offset], count - vec_offset, (vec_offset == 0) ? 0 : 1);
       if ( rv <= 0 ) {
@@ -950,8 +968,9 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       written += rv;
       while ( rv > 0 ) {
         if ( (unsigned int)rv >= v[vec_offset].iov_len ) {
-        rv -= v[vec_offset].iov_len;
+          rv -= v[vec_offset].iov_len;
           vec_offset++;
+          remain--;
         }
         else {
           v[vec_offset].iov_base = (char*)v[vec_offset].iov_base + rv;
