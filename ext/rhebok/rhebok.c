@@ -356,7 +356,7 @@ ssize_t _write_timeout(const int fileno, const double timeout, char * write_buf,
   int nfound;
   struct pollfd wfds[1];
   long write_buf_len;
-  if ( write_buf_len < 0 ) {
+  if ( write_len < 0 ) {
       return -1;
   }
   if ( write_len > UINT_MAX ) {
