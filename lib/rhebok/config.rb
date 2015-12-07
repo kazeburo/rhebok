@@ -68,6 +68,10 @@ class Rhebok
       @config[:ReusePort] = block
     end
 
+    def chunked_transfer(&block)
+      @config[:ChunkedTransfer] = block
+    end
+
     def retrieve
       @config
     end

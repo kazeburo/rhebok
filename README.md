@@ -114,6 +114,10 @@ Max number of request before invoking GC (defualt: 5)
 
 If set, randomizes the number of request before invoking GC between the number of MaxGCPerRequest (defualt: none)
 
+### Chunked_Transfer
+
+If set, use chunked transfer for response (default: false)
+
 ### SpawnInterval
 
 if set, worker processes will not be spawned more than once than every given seconds. Also, when SIGUSR1 is being received, no more than one worker processes will be collected every given seconds. This feature is useful for doing a "slow-restart". See http://blog.kazuhooku.com/2011/04/web-serverstarter-parallelprefork.html for more information. (default: none)
@@ -164,6 +168,8 @@ Supported options in config file are below.
 ### max_gc_per_request
 
 ### min_gc_per_request
+
+### chunked_transfer
 
 ### spawn_interval
 

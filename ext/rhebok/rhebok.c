@@ -819,7 +819,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
     use_chunked = 0;
   }
   
-  harr = rb_ary_new();
+  harr = rb_ary_new2(RHASH_SIZE(headers) * 2);
   RB_GC_GUARD(harr);
   rb_hash_foreach(headers, header_to_array, harr);
   hlen = RARRAY_LEN(harr);

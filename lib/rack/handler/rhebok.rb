@@ -41,6 +41,7 @@ module Rack
         :BeforeFork => nil,
         :AfterFork => nil,
         :ReusePort => false,
+        :ChunkedTransfer => false,
       }
       NULLIO  = StringIO.new("").set_encoding('BINARY')
 
@@ -63,6 +64,9 @@ module Rack
         end
         if options[:ReusePort].instance_of?(String)
           options[:ReusePort] = options[:ReusePort].match(/^(true|yes|1)$/i) ? true : false
+        end
+        if options[:ChunkedTransfer].instance_of?(String)
+          options[:ChunkedTransfer] = options[:ChunkedTransfer].match(/^(true|yes|1)$/i) ? true : false
         end
 
         @options = DEFAULT_OPTIONS.merge(options)
@@ -293,9 +297,12 @@ module Rack
 
               status_code, headers, body = app.call(env)
 
-              use_chunked =  env["SERVER_PROTOCOL"] != "HTTP/1.1" ||
-                             headers.key?("Transfer-Encoding") ||
-                             headers.key?("Content-Length") ? 0 : 1
+              use_chunked = 0
+              if @options[:ChunkedTransfer]
+                use_chunked =  env["SERVER_PROTOCOL"] != "HTTP/1.1" ||
+                               headers.key?("Transfer-Encoding") ||
+                               headers.key?("Content-Length") ? 0 : 1
+              end
 
               if body.instance_of?(Array)
                 ::Rhebok.write_response(connection, @options[:Timeout], status_code.to_i, headers, body, use_chunked, 0)

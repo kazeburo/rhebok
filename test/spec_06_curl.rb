@@ -51,7 +51,7 @@ describe Rhebok do
       @header["Connection"].should.equal "close"
       @header.key?("HTTP/1.1 100 Continue").should.equal false
     end
-  })
+  },1)
 
   test_rhebok( proc {
     [200,{"Content-Type"=>"text/plain"},["Content","","Again",nil,0]]
@@ -66,7 +66,7 @@ describe Rhebok do
     should "zero length with curl http/1.0" do
       @body.should.equal "ContentAgain0"
     end
-  })
+  },1)
 
   test_rhebok( proc {
     [200,{"Content-Type"=>"text/plain"},[]]
@@ -81,7 +81,7 @@ describe Rhebok do
     should "vacant rew with curl http/1.0" do
       @body.should.equal ""
     end
-  })
+  },1)
 
   test_rhebok( proc {
     [200,{"Content-Type"=>"text/plain"},ZeroStreamBody]
@@ -96,7 +96,7 @@ describe Rhebok do
     should "zerostream length with curl http/1.0" do
       @body.should.equal "ContentAgain0"
     end
-  })
+  },1)
 
   test_rhebok( proc {
     [200,{"Content-Type"=>"text/plain"},VacantStreamBody]
@@ -111,6 +111,6 @@ describe Rhebok do
     should "vacantstream length with curl http/1.0" do
       @body.should.equal ""
     end
-  })
+  },1)
 
 end

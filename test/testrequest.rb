@@ -78,12 +78,12 @@ class TestRequest
       }
     end
 
-    def test_rhebok(app,cb)
+    def test_rhebok(app,cb,chunked=0)
       begin
         @pid = fork
         if @pid == nil
           # child
-          Rack::Handler::Rhebok.run(app, :Host=>@host, :Port=>@port, :MaxWorkers=>1)
+          Rack::Handler::Rhebok.run(app, :Host=>@host, :Port=>@port, :MaxWorkers=>1, :ChunkedTransfer=>chunked)
           exit!(true)
         end
         cb.call
