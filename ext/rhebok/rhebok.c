@@ -303,11 +303,11 @@ ssize_t _writev_timeout(const int fileno, const double timeout, struct iovec *io
   if ( iovcnt < 0 ){
       return -1;
   }
-  if ( iovcnt > SIZE_MAX ) {
-      iovcnt_len = SIZE_MAX;
+  if ( iovcnt > UINT_MAX ) {
+      iovcnt_len = UINT_MAX;
   }
   else {
-      iovcnt_len = (int)iovcnt;
+      iovcnt_len = (unsigned int)iovcnt;
   }
   if ( do_select == 1) goto WAIT_WRITE;
  DO_WRITE:
@@ -365,15 +365,15 @@ ssize_t _write_timeout(const int fileno, const double timeout, char * write_buf,
   ssize_t rv;
   int nfound;
   struct pollfd wfds[1];
-  long write_buf_len;
+  size_t write_buf_len;
   if ( write_len < 0 ) {
       return -1;
   }
-  if ( write_len > SIZE_MAX ) {
-      write_buf_len = SIZE_MAX;
+  if ( write_len > UINT_MAX ) {
+      write_buf_len = UINT_MAX;
   }
   else {
-      write_buf_len = (int)write_len;
+      write_buf_len = (unsigned int)write_len;
   }
   
  DO_WRITE:
