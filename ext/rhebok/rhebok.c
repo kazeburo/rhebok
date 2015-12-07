@@ -295,7 +295,7 @@ int _accept(int fileno, struct sockaddr *addr, unsigned int addrlen) {
 
 static
 ssize_t _writev_timeout(const int fileno, const double timeout, struct iovec *iovec, const int iovcnt, const int do_select ) {
-  int rv;
+  ssize_t rv;
   int nfound;
   struct pollfd wfds[1];
   if ( do_select == 1) goto WAIT_WRITE;
@@ -323,8 +323,8 @@ ssize_t _writev_timeout(const int fileno, const double timeout, struct iovec *io
 }
 
 static
-ssize_t _read_timeout(const int fileno, const double timeout, char * read_buf, const int read_len ) {
-  int rv;
+ssize_t _read_timeout(const int fileno, const double timeout, char * read_buf, const ssize_t read_len ) {
+  ssize_t rv;
   int nfound;
   struct pollfd rfds[1];
  DO_READ:
@@ -351,7 +351,7 @@ ssize_t _read_timeout(const int fileno, const double timeout, char * read_buf, c
 
 static
 ssize_t _write_timeout(const int fileno, const double timeout, char * write_buf, const int write_len ) {
-  int rv;
+  ssize_t rv;
   int nfound;
   struct pollfd wfds[1];
  DO_WRITE:
@@ -377,7 +377,7 @@ ssize_t _write_timeout(const int fileno, const double timeout, char * write_buf,
 }
 
 static
-void str_s(char * dst, int *dst_len, const char * src, int src_len) {
+void str_s(char * dst, int *dst_len, const char * src, const unsigned long src_len) {
   int i;
   int dlen = *dst_len;
   for ( i=0; i<src_len; i++) {
@@ -788,9 +788,9 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   ssize_t iovcnt;
   ssize_t vec_offset;
   ssize_t written;
-  int count;
+  ssize_t count;
   int i;
-  int remain;
+  ssize_t remain;
   char status_line[512];
   char date_line[512];
   char server_line[1032];
