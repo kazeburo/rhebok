@@ -295,13 +295,23 @@ int _accept(int fileno, struct sockaddr *addr, unsigned int addrlen) {
 }
 
 static
-ssize_t _writev_timeout(const int fileno, const double timeout, struct iovec *iovec, const int iovcnt, const int do_select ) {
+ssize_t _writev_timeout(const int fileno, const double timeout, struct iovec *iovec, const long iovcnt, const int do_select ) {
   ssize_t rv;
   int nfound;
+  size_t iovcnt_len;
   struct pollfd wfds[1];
+  if ( iovcnt < 0 ){
+      return -1;
+  }
+  if ( iovcnt > SIZE_MAX ) {
+      iovcnt_len = SIZE_MAX;
+  }
+  else {
+      iovcnt_len = (int)iovcnt;
+  }
   if ( do_select == 1) goto WAIT_WRITE;
  DO_WRITE:
-  rv = writev(fileno, iovec, iovcnt);
+  rv = writev(fileno, iovec, iovcnt_len);
   if ( rv >= 0 ) {
     return rv;
   }
@@ -359,8 +369,8 @@ ssize_t _write_timeout(const int fileno, const double timeout, char * write_buf,
   if ( write_len < 0 ) {
       return -1;
   }
-  if ( write_len > UINT_MAX ) {
-      write_buf_len = UINT_MAX;
+  if ( write_len > SIZE_MAX ) {
+      write_buf_len = SIZE_MAX;
   }
   else {
       write_buf_len = (int)write_len;
