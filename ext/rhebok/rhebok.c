@@ -298,7 +298,7 @@ static
 ssize_t _writev_timeout(const int fileno, const double timeout, struct iovec *iovec, const long iovcnt, const int do_select ) {
   ssize_t rv;
   int nfound;
-  size_t iovcnt_len;
+  int iovcnt_len;
   struct pollfd wfds[1];
   if ( iovcnt < 0 ){
       return -1;
@@ -307,7 +307,7 @@ ssize_t _writev_timeout(const int fileno, const double timeout, struct iovec *io
       iovcnt_len = UINT_MAX;
   }
   else {
-      iovcnt_len = (unsigned int)iovcnt;
+      iovcnt_len = (int)iovcnt;
   }
   if ( do_select == 1) goto WAIT_WRITE;
  DO_WRITE:
