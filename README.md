@@ -9,7 +9,7 @@ Rhebok supports following features.
 - uses writev(2) for output responses
 - prefork and graceful shutdown using [prefork_engine](https://rubygems.org/gems/prefork_engine)
 - hot deploy using [start_server](https://metacpan.org/release/Server-Starter) ([here](https://github.com/lestrrat/go-server-starter) is golang version by lestrrat-san)
-- supports HTTP/1.1. But does not have Keepalive
+- supports HTTP/1.1 except for KeepAlive
 - supports OobGC
 
 This server is suitable for running HTTP application servers behind a reverse proxy like nginx.
