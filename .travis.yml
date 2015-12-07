@@ -2,6 +2,7 @@ language: ruby
 install:
   - git submodule update --init --recursive
   - gem install bacon
+  - gem install bundler
   - bundle install --jobs=3 --retry=3
 rvm:
   - 2.0.0
