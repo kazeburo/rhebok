@@ -378,7 +378,7 @@ ssize_t _write_timeout(const int fileno, const double timeout, char * write_buf,
 
 static
 void str_s(char * dst, int *dst_len, const char * src, const unsigned long src_len) {
-  int i;
+  unsigned long i;
   int dlen = *dst_len;
   for ( i=0; i<src_len; i++) {
     dst[dlen++] = src[i];
