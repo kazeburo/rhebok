@@ -241,7 +241,8 @@ VALUE find_common_header(const struct phr_header* header) {
 
 static
 int store_path_info(VALUE env, const char* src, size_t src_len) {
-  size_t dlen = 0, i = 0;
+  int dlen = 0;
+  size_t i = 0;
   char *d;
   char s2, s3;
   d = ALLOC_N(char, src_len * 3 + 1);
@@ -350,12 +351,23 @@ ssize_t _read_timeout(const int fileno, const double timeout, char * read_buf, c
 }
 
 static
-ssize_t _write_timeout(const int fileno, const double timeout, char * write_buf, const int write_len ) {
+ssize_t _write_timeout(const int fileno, const double timeout, char * write_buf, const long write_len ) {
   ssize_t rv;
   int nfound;
   struct pollfd wfds[1];
+  long write_buf_len;
+  if ( write_buf_len < 0 ) {
+      return -1;
+  }
+  if ( write_len > UINT_MAX ) {
+      write_buf_len = UINT_MAX;
+  }
+  else {
+      write_buf_len = (int)write_len;
+  }
+  
  DO_WRITE:
-  rv = write(fileno, write_buf, write_len);
+  rv = write(fileno, write_buf, write_buf_len);
   if ( rv >= 0 ) {
     return rv;
   }
@@ -691,8 +703,8 @@ VALUE rhe_write_chunk(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE 
   ssize_t rv = 0;
   ssize_t written = 0;
   ssize_t vec_offset = 0;
-  int count =0;
-  int remain;
+  ssize_t count =0;
+  ssize_t remain;
   ssize_t iovcnt = 3;
   char chunked_header_buf[18];
 
