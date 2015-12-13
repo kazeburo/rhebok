@@ -1,6 +1,8 @@
 # Rhebok
 
-Rhebok is High Performance Rack Handler/Web Server. 2x performance when compared against Unicorn. 
+[![Build Status](https://travis-ci.org/kazeburo/rhebok.svg?branch=master)](https://travis-ci.org/kazeburo/rhebok)
+
+Rhebok is High Performance Rack Handler/Web Server. 2x performance when compared against Unicorn.
 
 Rhebok supports following features.
 
@@ -211,11 +213,11 @@ ruby version
 nginx.conf
 
     worker_processes  16;
-    
+
     events {
       worker_connections  50000;
     }
-    
+
     http {
       include     mime.types;
       access_log  off;
@@ -289,8 +291,8 @@ unicorn.rb
 command to run
 
     $ bundle exec unicorn -c unicorn.rb -E production config.ru
- 
-#### Hello World/Rack Application 
+
+#### Hello World/Rack Application
 
     $ ./wrk -t 4 -c 500 -d 30  http://localhost/
     Running 30s test @ http://localhost/
@@ -328,7 +330,7 @@ command to run
 
 ### Server Environment
 
-I used EC2 for benchmarking. Instance type if c3.8xlarge(32cores). A benchmark tool and web servers were executed at same hosts. Before benchmark, increase somaxconn and nfiles. 
+I used EC2 for benchmarking. Instance type if c3.8xlarge(32cores). A benchmark tool and web servers were executed at same hosts. Before benchmark, increase somaxconn and nfiles.
 
 ## See Also
 
