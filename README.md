@@ -1,5 +1,8 @@
 # Rhebok
 
+![rhebok logo](https://s3-ap-northeast-1.amazonaws.com/softwarearchives/rhebookfix-350.png)
+
+
 [![Build Status](https://travis-ci.org/kazeburo/rhebok.svg?branch=master)](https://travis-ci.org/kazeburo/rhebok)
 
 Rhebok is High Performance Rack Handler/Web Server. 2x performance when compared against Unicorn.
