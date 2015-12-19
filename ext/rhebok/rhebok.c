@@ -156,6 +156,8 @@ struct common_header {
 static int common_headers_num = 0;
 static struct common_header common_headers[20];
 
+static char date_buf[sizeof("Date: Sat, 19 Dec 2015 14:16:27 GMT\r\n")-1];
+
 static
 void set_common_header(const char * key, int key_len, const int raw)
 {
@@ -341,7 +343,8 @@ ssize_t _read_timeout(const int fileno, const double timeout, char * read_buf, c
  DO_READ:
   rfds[0].fd = fileno;
   rfds[0].events = POLLIN;
-  rv = read(fileno, read_buf, read_len);
+  //rv = read(fileno, read_buf, read_len);
+  rv = recvfrom(fileno, read_buf, read_len, 0, NULL, NULL);
   if ( rv >= 0 ) {
     return rv;
   }
@@ -438,39 +441,42 @@ int _chunked_header(char *buf, ssize_t len) {
 }
 
 static
-int _date_line(char * date_line) {
+char * _date_header(void) {
+  static time_t last;
   struct tm gtm;
   time_t lt;
   int i = 0;
   time(&lt);
+  if ( last == lt ) return date_buf;
+  last = lt;
   gmtime_r(&lt, &gtm);
-  date_line[i++] = 'D';
-  date_line[i++] = 'a';
-  date_line[i++] = 't';
-  date_line[i++] = 'e';
-  date_line[i++] = ':';
-  date_line[i++] = ' ';
-  str_s(date_line, &i, DoW[gtm.tm_wday], 3);
-  date_line[i++] = ',';
-  date_line[i++] = ' ';
-  str_i(date_line, &i, gtm.tm_mday, 2);
-  date_line[i++] = ' ';
-  str_s(date_line, &i, MoY[gtm.tm_mon], 3);
-  date_line[i++] = ' ';
-  str_i(date_line, &i, gtm.tm_year + 1900, 4);
-  date_line[i++] = ' ';
-  str_i(date_line, &i, gtm.tm_hour,2);
-  date_line[i++] = ':';
-  str_i(date_line, &i, gtm.tm_min,2);
-  date_line[i++] = ':';
-  str_i(date_line, &i, gtm.tm_sec,2);
-  date_line[i++] = ' ';
-  date_line[i++] = 'G';
-  date_line[i++] = 'M';
-  date_line[i++] = 'T';
-  date_line[i++] = 13;
-  date_line[i++] = 10;
-  return i;
+  date_buf[i++] = 'D';
+  date_buf[i++] = 'a';
+  date_buf[i++] = 't';
+  date_buf[i++] = 'e';
+  date_buf[i++] = ':';
+  date_buf[i++] = ' ';
+  str_s(date_buf, &i, DoW[gtm.tm_wday], 3);
+  date_buf[i++] = ',';
+  date_buf[i++] = ' ';
+  str_i(date_buf, &i, gtm.tm_mday, 2);
+  date_buf[i++] = ' ';
+  str_s(date_buf, &i, MoY[gtm.tm_mon], 3);
+  date_buf[i++] = ' ';
+  str_i(date_buf, &i, gtm.tm_year + 1900, 4);
+  date_buf[i++] = ' ';
+  str_i(date_buf, &i, gtm.tm_hour,2);
+  date_buf[i++] = ':';
+  str_i(date_buf, &i, gtm.tm_min,2);
+  date_buf[i++] = ':';
+  str_i(date_buf, &i, gtm.tm_sec,2);
+  date_buf[i++] = ' ';
+  date_buf[i++] = 'G';
+  date_buf[i++] = 'M';
+  date_buf[i++] = 'T';
+  date_buf[i++] = 13;
+  date_buf[i++] = 10;
+  return date_buf;
 }
 
 static
@@ -484,7 +490,7 @@ int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
   size_t num_headers, question_at;
   size_t i;
   int ret;
-  char tmp[MAX_HEADER_NAME_LEN + sizeof("HTTP_") - 1];
+  char tmp[MAX_HEADER_NAME_LEN + sizeof("HTTP_") - 1] = "HTTP_";
   VALUE last_value;
 
   num_headers = MAX_HEADERS;
@@ -525,7 +531,6 @@ int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
           ret = -1;
           goto done;
         }
-        strcpy(tmp, "HTTP_");
         for (s = headers[i].name, n = headers[i].name_len, d = tmp + 5;
           n != 0;
           s++, --n, d++) {
@@ -621,6 +626,11 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
     }
     buf_len += rv;
   }
+
+  //rv = _write_timeout(fd, timeout, "HTTP/1.0 200 OK\r\nConnection: close\r\n\r\n200 OK\r\n",
+  //                    sizeof("HTTP/1.0 200 OK\r\nConnection: close\r\n\r\n200 OK\r\n") - 1);
+  //close(fd);
+  //goto badexit;
 
   VALUE expect_val = rb_hash_aref(env, expect_key);
   if ( expect_val != Qnil ) {
@@ -813,10 +823,11 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   ssize_t count;
   int i;
   ssize_t remain;
-  char status_line[512];
-  char date_line[512];
-  char server_line[1032];
+  char status_line[512] = "HTTP/1.1 ";
+  char * date_line;
   int date_pushed = 0;
+  char * server_line;
+  int server_pushed = 0;
   VALUE harr;
   VALUE key_obj;
   VALUE val_obj;
@@ -835,7 +846,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   int status_code = NUM2INT(status_codev);
   int use_chunked = NUM2INT(use_chunkedv);
   int header_only = NUM2INT(header_onlyv);
-  
+
   /* status_with_no_entity_body */
   if ( status_code < 200 || status_code == 204 || status_code == 304 ) {
     use_chunked = 0;
@@ -847,24 +858,16 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   hlen = RARRAY_LEN(harr);
   blen = RARRAY_LEN(body);
   iovcnt = 10 + (hlen * 2) + blen;
-  if ( use_chunked )
+  if ( use_chunked ) {
       iovcnt += blen*2;
-  chunked_header_buf = ALLOC_N(char, 32 * blen);
+      chunked_header_buf = ALLOC_N(char, 32 * blen);
+  }
 
   {
     struct iovec v[iovcnt]; // Needs C99 compiler
     /* status line */
     iovcnt = 0;
-    i=0;
-    status_line[i++] = 'H';
-    status_line[i++] = 'T';
-    status_line[i++] = 'T';
-    status_line[i++] = 'P';
-    status_line[i++] = '/';
-    status_line[i++] = '1';
-    status_line[i++] = '.';
-    status_line[i++] = '1';
-    status_line[i++] = ' ';
+    i = sizeof("HTTP/1.1 ") - 1;
     str_i(status_line,&i,status_code,3);
     status_line[i++] = ' ';
     message = status_message(status_code);
@@ -883,6 +886,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
     iovcnt++;
 
     date_pushed = 0;
+
     for ( i = 0; i < hlen; i++ ) {
       key_obj = rb_ary_entry(harr, i);
       key = RSTRING_PTR(key_obj);
@@ -896,6 +900,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       val_obj = rb_ary_entry(harr, i);
 
       if ( strncasecmp(key,"Date",key_len) == 0 ) {
+        date_line = ALLOC_N(char, sizeof("Date: ")-1 + RSTRING_LEN(val_obj) + sizeof("\r\n")-1);
         strcpy(date_line, "Date: ");
         for ( s=RSTRING_PTR(val_obj), n = RSTRING_LEN(val_obj), d=date_line+sizeof("Date: ")-1; n !=0; s++, --n, d++) {
           *d = *s;
@@ -908,6 +913,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
         continue;
       }
       if ( strncasecmp(key,"Server",key_len) == 0 ) {
+        server_line = ALLOC_N(char, sizeof("Server: ")-1 + RSTRING_LEN(val_obj) + sizeof("\r\n")-1);
         strcpy(server_line, "Server: ");
         for ( s=RSTRING_PTR(val_obj), n = RSTRING_LEN(val_obj), d=server_line+sizeof("Server: ")-1; n !=0; s++, --n, d++) {
           *d = *s;
@@ -916,6 +922,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
         server_line[sizeof("Server: ") -1 + RSTRING_LEN(val_obj) + 1] = 10;
         v[2].iov_base = server_line;
         v[2].iov_len = sizeof("Server: ") -1 + RSTRING_LEN(val_obj) + 2;
+        server_pushed = 1;
         continue;
       }
 
@@ -926,7 +933,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       v[iovcnt].iov_len = sizeof(": ") - 1;
       iovcnt++;
 
-      /* value */
+      // value
       v[iovcnt].iov_base = RSTRING_PTR(val_obj);
       v[iovcnt].iov_len = RSTRING_LEN(val_obj);
       iovcnt++;
@@ -936,19 +943,20 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
     }
 
     if ( date_pushed == 0 ) {
-      v[1].iov_len = _date_line(date_line);
-      v[1].iov_base = date_line;
+        v[1].iov_len = sizeof("Date: Sat, 19 Dec 2015 14:16:27 GMT\r\n") - 1;
+        v[1].iov_base = _date_header();
     }
 
     if ( use_chunked ) {
-      v[iovcnt].iov_base = "Transfer-Encoding: chunked\r\n";
-      v[iovcnt].iov_len = sizeof("Transfer-Encoding: chunked\r\n") - 1;
+      v[iovcnt].iov_base = "Transfer-Encoding: chunked\r\nConnection: close\r\n\r\n";
+      v[iovcnt].iov_len = sizeof("Transfer-Encoding: chunked\r\nConnection: close\r\n\r\n") - 1;
       iovcnt++;
     }
-
-    v[iovcnt].iov_base = "Connection: close\r\n\r\n";
-    v[iovcnt].iov_len = sizeof("Connection: close\r\n\r\n") - 1;
-    iovcnt++;
+    else {
+        v[iovcnt].iov_base = "Connection: close\r\n\r\n";
+        v[iovcnt].iov_len = sizeof("Connection: close\r\n\r\n") - 1;
+        iovcnt++;
+    }
 
     ssize_t chb_offset = 0;
     for ( i=0; i<blen; i++) {
@@ -1002,7 +1010,12 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
       }
     }
   }
-  xfree(chunked_header_buf);
+  if ( use_chunked )
+      xfree(chunked_header_buf);
+  if ( server_pushed )
+      xfree(server_line);
+  if ( date_pushed )
+      xfree(date_line);
   if ( rv < 0 ) {
     return Qnil;
   }
