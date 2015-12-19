@@ -35,6 +35,7 @@
 #define EXPECT_FAILED "HTTP/1.1 417 Expectation Failed\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nExpectation Failed\r\n"
 #define READ_BUF 16384
 #define TOU(ch) (('a' <= ch && ch <= 'z') ? ch - ('a' - 'A') : ch)
+#define RETURN_STATUS_MESSAGE(s, l) l = sizeof(s) - 1; return s;
 
 static const char *DoW[] = {
   "Sun","Mon","Tue","Wed","Thu","Fri","Sat"
@@ -49,84 +50,84 @@ static const char xdigit[16] = {'0','1','2','3','4','5','6','7','8','9','a','b',
 /* Unmarked codes are from RFC 2616 */
 /* See also: http://en.wikipedia.org/wiki/List_of_HTTP_status_codes */
 static const char *
-status_message (int code) {
+status_message (int code, size_t *mlen) {
   switch (code) {
-    case 100: return "Continue";
-    case 101: return "Switching Protocols";
-    case 102: return "Processing";                      /* RFC 2518 (WebDAV) */
-    case 200: return "OK";
-    case 201: return "Created";
-    case 202: return "Accepted";
-    case 203: return "Non-Authoritative Information";
-    case 204: return "No Content";
-    case 205: return "Reset Content";
-    case 206: return "Partial Content";
-    case 207: return "Multi-Status";                    /* RFC 2518 (WebDAV) */
-    case 208: return "Already Reported";              /* RFC 5842 */
-    case 300: return "Multiple Choices";
-    case 301: return "Moved Permanently";
-    case 302: return "Found";
-    case 303: return "See Other";
-    case 304: return "Not Modified";
-    case 305: return "Use Proxy";
-    case 307: return "Temporary Redirect";
-    case 400: return "Bad Request";
-    case 401: return "Unauthorized";
-    case 402: return "Payment Required";
-    case 403: return "Forbidden";
-    case 404: return "Not Found";
-    case 405: return "Method Not Allowed";
-    case 406: return "Not Acceptable";
-    case 407: return "Proxy Authentication Required";
-    case 408: return "Request Timeout";
-    case 409: return "Conflict";
-    case 410: return "Gone";
-    case 411: return "Length Required";
-    case 412: return "Precondition Failed";
-    case 413: return "Request Entity Too Large";
-    case 414: return "Request-URI Too Large";
-    case 415: return "Unsupported Media Type";
-    case 416: return "Request Range Not Satisfiable";
-    case 417: return "Expectation Failed";
-    case 418: return "I'm a teapot";              /* RFC 2324 */
-    case 422: return "Unprocessable Entity";            /* RFC 2518 (WebDAV) */
-    case 423: return "Locked";                          /* RFC 2518 (WebDAV) */
-    case 424: return "Failed Dependency";               /* RFC 2518 (WebDAV) */
-    case 425: return "No code";                         /* WebDAV Advanced Collections */
-    case 426: return "Upgrade Required";                /* RFC 2817 */
-    case 428: return "Precondition Required";
-    case 429: return "Too Many Requests";
-    case 431: return "Request Header Fields Too Large";
-    case 449: return "Retry with";                      /* unofficial Microsoft */
-    case 500: return "Internal Server Error";
-    case 501: return "Not Implemented";
-    case 502: return "Bad Gateway";
-    case 503: return "Service Unavailable";
-    case 504: return "Gateway Timeout";
-    case 505: return "HTTP Version Not Supported";
-    case 506: return "Variant Also Negotiates";         /* RFC 2295 */
-    case 507: return "Insufficient Storage";            /* RFC 2518 (WebDAV) */
-    case 509: return "Bandwidth Limit Exceeded";        /* unofficial */
-    case 510: return "Not Extended";                    /* RFC 2774 */
-    case 511: return "Network Authentication Required";
+    case 100: RETURN_STATUS_MESSAGE("Continue", *mlen);
+    case 101: RETURN_STATUS_MESSAGE("Switching Protocols", *mlen);
+    case 102: RETURN_STATUS_MESSAGE("Processing", *mlen);                      /* RFC 2518 (WebDAV) */
+    case 200: RETURN_STATUS_MESSAGE("OK", *mlen);
+    case 201: RETURN_STATUS_MESSAGE("Created", *mlen);
+    case 202: RETURN_STATUS_MESSAGE("Accepted", *mlen);
+    case 203: RETURN_STATUS_MESSAGE("Non-Authoritative Information", *mlen);
+    case 204: RETURN_STATUS_MESSAGE("No Content", *mlen);
+    case 205: RETURN_STATUS_MESSAGE("Reset Content", *mlen);
+    case 206: RETURN_STATUS_MESSAGE("Partial Content", *mlen);
+    case 207: RETURN_STATUS_MESSAGE("Multi-Status", *mlen);                    /* RFC 2518 (WebDAV) */
+    case 208: RETURN_STATUS_MESSAGE("Already Reported", *mlen);                /* RFC 5842 */
+    case 300: RETURN_STATUS_MESSAGE("Multiple Choices", *mlen);
+    case 301: RETURN_STATUS_MESSAGE("Moved Permanently", *mlen);
+    case 302: RETURN_STATUS_MESSAGE("Found", *mlen);
+    case 303: RETURN_STATUS_MESSAGE("See Other", *mlen);
+    case 304: RETURN_STATUS_MESSAGE("Not Modified", *mlen);
+    case 305: RETURN_STATUS_MESSAGE("Use Proxy", *mlen);
+    case 307: RETURN_STATUS_MESSAGE("Temporary Redirect", *mlen);
+    case 400: RETURN_STATUS_MESSAGE("Bad Request", *mlen);
+    case 401: RETURN_STATUS_MESSAGE("Unauthorized", *mlen);
+    case 402: RETURN_STATUS_MESSAGE("Payment Required", *mlen);
+    case 403: RETURN_STATUS_MESSAGE("Forbidden", *mlen);
+    case 404: RETURN_STATUS_MESSAGE("Not Found", *mlen);
+    case 405: RETURN_STATUS_MESSAGE("Method Not Allowed", *mlen);
+    case 406: RETURN_STATUS_MESSAGE("Not Acceptable", *mlen);
+    case 407: RETURN_STATUS_MESSAGE("Proxy Authentication Required", *mlen);
+    case 408: RETURN_STATUS_MESSAGE("Request Timeout", *mlen);
+    case 409: RETURN_STATUS_MESSAGE("Conflict", *mlen);
+    case 410: RETURN_STATUS_MESSAGE("Gone", *mlen);
+    case 411: RETURN_STATUS_MESSAGE("Length Required", *mlen);
+    case 412: RETURN_STATUS_MESSAGE("Precondition Failed", *mlen);
+    case 413: RETURN_STATUS_MESSAGE("Request Entity Too Large", *mlen);
+    case 414: RETURN_STATUS_MESSAGE("Request-URI Too Large", *mlen);
+    case 415: RETURN_STATUS_MESSAGE("Unsupported Media Type", *mlen);
+    case 416: RETURN_STATUS_MESSAGE("Request Range Not Satisfiable", *mlen);
+    case 417: RETURN_STATUS_MESSAGE("Expectation Failed", *mlen);
+    case 418: RETURN_STATUS_MESSAGE("I'm a teapot", *mlen);                    /* RFC 2324 */
+    case 422: RETURN_STATUS_MESSAGE("Unprocessable Entity", *mlen);            /* RFC 2518 (WebDAV) */
+    case 423: RETURN_STATUS_MESSAGE("Locked", *mlen);                          /* RFC 2518 (WebDAV) */
+    case 424: RETURN_STATUS_MESSAGE("Failed Dependency", *mlen);               /* RFC 2518 (WebDAV) */
+    case 425: RETURN_STATUS_MESSAGE("No code", *mlen);                         /* WebDAV Advanced Collections */
+    case 426: RETURN_STATUS_MESSAGE("Upgrade Required", *mlen);                /* RFC 2817 */
+    case 428: RETURN_STATUS_MESSAGE("Precondition Required", *mlen);
+    case 429: RETURN_STATUS_MESSAGE("Too Many Requests", *mlen);
+    case 431: RETURN_STATUS_MESSAGE("Request Header Fields Too Large", *mlen);
+    case 449: RETURN_STATUS_MESSAGE("Retry with", *mlen);                      /* unofficial Microsoft */
+    case 500: RETURN_STATUS_MESSAGE("Internal Server Error", *mlen);
+    case 501: RETURN_STATUS_MESSAGE("Not Implemented", *mlen);
+    case 502: RETURN_STATUS_MESSAGE("Bad Gateway", *mlen);
+    case 503: RETURN_STATUS_MESSAGE("Service Unavailable", *mlen);
+    case 504: RETURN_STATUS_MESSAGE("Gateway Timeout", *mlen);
+    case 505: RETURN_STATUS_MESSAGE("HTTP Version Not Supported", *mlen);
+    case 506: RETURN_STATUS_MESSAGE("Variant Also Negotiates", *mlen);         /* RFC 2295 */
+    case 507: RETURN_STATUS_MESSAGE("Insufficient Storage", *mlen);            /* RFC 2518 (WebDAV) */
+    case 509: RETURN_STATUS_MESSAGE("Bandwidth Limit Exceeded", *mlen);        /* unofficial */
+    case 510: RETURN_STATUS_MESSAGE("Not Extended", *mlen);                    /* RFC 2774 */
+    case 511: RETURN_STATUS_MESSAGE("Network Authentication Required", *mlen);
     default: break;
   }
   /* default to the Nxx group names in RFC 2616 */
   if (100 <= code && code <= 199) {
-    return "Informational";
+    RETURN_STATUS_MESSAGE("Informational", *mlen);
   }
   else if (200 <= code && code <= 299) {
-    return "Success";
-    }
-    else if (300 <= code && code <= 399) {
-        return "Redirection";
-    }
-    else if (400 <= code && code <= 499) {
-        return "Client Error";
-    }
-    else {
-        return "Error";
-    }
+    RETURN_STATUS_MESSAGE("Success", *mlen);
+  }
+  else if (300 <= code && code <= 399) {
+    RETURN_STATUS_MESSAGE("Redirection", *mlen);
+  }
+  else if (400 <= code && code <= 499) {
+    RETURN_STATUS_MESSAGE("Client Error", *mlen);
+  }
+  else {
+    RETURN_STATUS_MESSAGE("Error", *mlen);
+  }
 }
 
 static VALUE cRhebok;
@@ -865,13 +866,14 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
 
   {
     struct iovec v[iovcnt]; // Needs C99 compiler
+    size_t mlen;
     /* status line */
     iovcnt = 0;
     i = sizeof("HTTP/1.1 ") - 1;
     str_i(status_line,&i,status_code,3);
     status_line[i++] = ' ';
-    message = status_message(status_code);
-    str_s(status_line, &i, message, strlen(message));
+    message = status_message(status_code, &mlen);
+    str_s(status_line, &i, message, mlen);
     status_line[i++] = 13;
     status_line[i++] = 10;
     v[iovcnt].iov_base = status_line;
