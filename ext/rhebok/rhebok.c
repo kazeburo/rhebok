@@ -515,6 +515,7 @@ int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
   if (question_at != path_len) ++question_at;
   rb_hash_aset(env, query_string_key, rb_str_new(path + question_at, path_len - question_at));
   last_value = Qnil;
+
   for (i = 0; i < num_headers; ++i) {
     if (headers[i].name != NULL) {
       const char* name;
@@ -522,7 +523,7 @@ int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
       VALUE slot;
       VALUE env_key;
       env_key = find_common_header(headers + i);
-      if ( env_key == Qnil ) {
+      if ( NIL_P(env_key) ) {
         const char* s;
         char* d;
         size_t n;
@@ -541,7 +542,7 @@ int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
         }
       }
       slot = rb_hash_aref(env, env_key);
-      if ( slot != Qnil ) {
+      if ( !NIL_P(slot) ) {
         rb_str_cat2(slot, ", ");
         rb_str_cat(slot, headers[i].value, headers[i].value_len);
       } else {
@@ -550,12 +551,11 @@ int _parse_http_request(char *buf, ssize_t buf_len, VALUE env) {
         last_value = slot;
       }
     } else {
-      /* continuing lines of a mulitiline header */
-      if ( last_value != Qnil )
-        rb_str_cat(last_value, headers[i].value, headers[i].value_len);
+      // continuing lines of a mulitiline header
+        if ( !NIL_P(last_value) )
+          rb_str_cat(last_value, headers[i].value, headers[i].value_len);
     }
   }
-
  done:
   return ret;
 }
@@ -633,7 +633,7 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
   //goto badexit;
 
   VALUE expect_val = rb_hash_aref(env, expect_key);
-  if ( expect_val != Qnil ) {
+  if ( !NIL_P(expect_val) ) {
       if ( strncmp(RSTRING_PTR(expect_val), "100-continue", RSTRING_LEN(expect_val)) == 0 ) {
           rv = _write_timeout(fd, timeout, EXPECT_CONTINUE, sizeof(EXPECT_CONTINUE) - 1);
           if ( rv <= 0 ) {
@@ -1053,7 +1053,8 @@ void Init_rhebok()
 
   expect_key = rb_obj_freeze(rb_str_new2("HTTP_EXPECT"));
   rb_gc_register_address(&expect_key);
-  
+
+  set_common_header("HOST",sizeof("HOST") - 1, 0);
   set_common_header("ACCEPT",sizeof("ACCEPT") - 1, 0);
   set_common_header("ACCEPT-ENCODING",sizeof("ACCEPT-ENCODING") - 1, 0);
   set_common_header("ACCEPT-LANGUAGE",sizeof("ACCEPT-LANGUAGE") - 1, 0);
@@ -1062,7 +1063,6 @@ void Init_rhebok()
   set_common_header("CONTENT-LENGTH",sizeof("CONTENT-LENGTH") - 1, 1);
   set_common_header("CONTENT-TYPE",sizeof("CONTENT-TYPE") - 1, 1);
   set_common_header("COOKIE",sizeof("COOKIE") - 1, 0);
-  set_common_header("HOST",sizeof("HOST") - 1, 0);
   set_common_header("IF-MODIFIED-SINCE",sizeof("IF-MODIFIED-SINCE") - 1, 0);
   set_common_header("REFERER",sizeof("REFERER") - 1, 0);
   set_common_header("USER-AGENT",sizeof("USER-AGENT") - 1, 0);
