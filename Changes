@@ -1,3 +1,7 @@
+0.9.2 2015-12-24T00:31:23
+
+    - optimize a bit
+
 0.9.1 2015-12-07T10:37:51
 
     - disable chunked transfer by default
