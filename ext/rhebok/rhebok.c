@@ -593,7 +593,7 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
   if ( tcp == Qtrue ) {
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
     rb_hash_aset(env, remote_addr_key, rb_str_new2(inet_ntoa(cliaddr.sin_addr)));
-    rb_hash_aset(env, remote_port_key, rb_String(rb_int_new(ntohs(cliaddr.sin_port))));
+    rb_hash_aset(env, remote_port_key, rb_String(INT2FIX(ntohs(cliaddr.sin_port))));
   }
   else {
     rb_hash_aset(env, remote_addr_key, vacant_string_val);
@@ -649,7 +649,7 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
   }
 
   req = rb_ary_new2(2);
-  rb_ary_push(req, rb_int_new(fd));
+  rb_ary_push(req, INT2NUM(fd));
   rb_ary_push(req, rb_str_new(&read_buf[reqlen],buf_len - reqlen));
   return req;
  badexit:
@@ -676,7 +676,7 @@ VALUE rhe_read_timeout(VALUE self, VALUE filenov, VALUE rbuf, VALUE lenv, VALUE 
     rb_str_cat(rbuf, d, rv);
   }
   xfree(d);
-  return rb_int_new(rv);
+  return SSIZET2NUM(rv);
 }
 
 static
@@ -689,7 +689,7 @@ VALUE rhe_write_timeout(VALUE self, VALUE fileno, VALUE buf, VALUE len, VALUE of
   if ( rv < 0 ) {
     return Qnil;
   }
-  return rb_int_new(rv);
+  return SSIZET2NUM(rv);
 }
 
 
@@ -715,7 +715,7 @@ VALUE rhe_write_all(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE ti
   if (rv < 0) {
     return Qnil;
   }
-  return rb_int_new(written);
+  return SSIZET2NUM(written);
 }
 
 static
@@ -733,7 +733,7 @@ VALUE rhe_write_chunk(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE 
   buf_len = RSTRING_LEN(buf);
 
   if ( buf_len == 0 ){
-      return rb_int_new(0);
+      return INT2FIX(0);
   }
 
   {
@@ -773,7 +773,7 @@ VALUE rhe_write_chunk(VALUE self, VALUE fileno, VALUE buf, VALUE offsetv, VALUE 
   if ( rv < 0 ) {
     return Qnil;
   }
-  return rb_int_new(written);
+  return SSIZET2NUM(written);
 }
 
 static
@@ -1021,7 +1021,7 @@ VALUE rhe_write_response(VALUE self, VALUE filenov, VALUE timeoutv, VALUE status
   if ( rv < 0 ) {
     return Qnil;
   }
-  return rb_int_new(written);
+  return SSIZET2NUM(written);
 }
 
 void Init_rhebok()
