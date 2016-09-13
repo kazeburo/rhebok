@@ -118,7 +118,7 @@ class TestRequest
             header[key.to_s] = val.to_s
             next
           end
-          line.sub!(/\* Closing connection #0\n/,"")
+          line.sub!(/\* Closing connection #?0\n/,"")
           body += line
         end
       }
