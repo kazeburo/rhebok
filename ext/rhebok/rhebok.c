@@ -593,7 +593,7 @@ VALUE rhe_accept(VALUE self, VALUE fileno, VALUE timeoutv, VALUE tcp, VALUE env)
   if ( tcp == Qtrue ) {
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
     rb_hash_aset(env, remote_addr_key, rb_str_new2(inet_ntoa(cliaddr.sin_addr)));
-    rb_hash_aset(env, remote_port_key, rb_fix2str(INT2FIX(ntohs(cliaddr.sin_port))));
+    rb_hash_aset(env, remote_port_key, rb_fix2str(INT2FIX(ntohs(cliaddr.sin_port)),10));
   }
   else {
     rb_hash_aset(env, remote_addr_key, vacant_string_val);
