@@ -23,7 +23,11 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "bundler", "~> 1.7"
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "bacon"
-  spec.add_dependency "rack", "~> 1.6.4"
+  if Gem::Version.create(RUBY_VERSION) >= Gem::Version.create("2.2.2")
+    spec.add_dependency "rack"
+  else
+    spec.add_dependency "rack", "~> 1.6.4"
+  end
   spec.add_dependency "prefork_engine", ">= 0.0.7"
 
   # get an array of submodule dirs by executing 'pwd' inside each submodule
