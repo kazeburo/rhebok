@@ -325,7 +325,7 @@ ssize_t _writev_timeout(const int fileno, const double timeout, struct iovec *io
   while (1) {
     wfds[0].fd = fileno;
     wfds[0].events = POLLOUT;
-    nfound = poll(wfds, 1, (int)timeout*1000);
+    nfound = poll(wfds, 1, (int)(timeout*1000));
     if ( nfound == 1 ) {
       break;
     }
@@ -353,7 +353,7 @@ ssize_t _read_timeout(const int fileno, const double timeout, char * read_buf, c
     return rv;
   }
   while (1) {
-    nfound = poll(rfds, 1, (int)timeout*1000);
+    nfound = poll(rfds, 1, (int)(timeout*1000));
     if ( nfound == 1 ) {
       break;
     }
@@ -391,7 +391,7 @@ ssize_t _write_timeout(const int fileno, const double timeout, char * write_buf,
   while (1) {
     wfds[0].fd = fileno;
     wfds[0].events = POLLOUT;
-    nfound = poll(wfds, 1, (int)timeout*1000);
+    nfound = poll(wfds, 1, (int)(timeout*1000));
     if ( nfound == 1 ) {
       break;
     }
