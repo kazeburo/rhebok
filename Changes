@@ -1,3 +1,9 @@
+0.9.3 2016-09-13T11:05:00
+
+    - bugfix about timeout by wrong Operator Precedence #7
+    - Optimize by avoiding function call #8
+    - fix rack deps
+
 0.9.2 2015-12-24T00:31:23
 
     - optimize a bit
