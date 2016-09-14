@@ -5,7 +5,5 @@ install:
   - gem install bundler
   - bundle install --jobs=3 --retry=3
 rvm:
-  - 2.0.0
-  - 2.1.5
   - 2.2.3
   - 2.3.1
